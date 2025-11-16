@@ -1,41 +1,36 @@
 from dataclasses import asdict
 from typing import Any, Dict
-from .Field import Field
+from .Field import Field, FieldType
 
 class FieldSerializer:
     """
-    Responsible ONLY for converting FormField -> API schema dict.
-    Zero business logic in the model.
+    Converts Field dataclass to API schema dict.
+    Main purpose: Transform field names (default_value -> defaultValue) for API compatibility.
     """
 
     @staticmethod
     def to_dict(field_obj: Field) -> Dict[str, Any]:
+        """
+        Convert Field to API dict format.
+        Main transformation: default_value -> defaultValue (snake_case to camelCase)
+        """
         raw = asdict(field_obj)
-
-        # Transform python naming -> API-facing format
-        # FieldType inherits from str, so it serializes directly to string
-        result = {
-            "name": raw["name"],
-            "type": str(raw["type"]),  # Convert enum to string value
-            "label": raw["label"],
-            "required": raw["required"],
-        }
-
-        FieldSerializer._include_optional(result, raw)
-
+        
+        # Convert enum to string
+        if isinstance(raw["type"], FieldType):
+            raw["type"] = raw["type"].value
+        else:
+            raw["type"] = str(raw["type"])
+        
+        # Remove None/empty optional fields (matching original behavior)
+        result = {}
+        for k, v in raw.items():
+            # Include required fields always
+            if k in ("name", "type", "label", "required"):
+                result[k] = v
+            # Include optional fields only if they have values
+            elif v not in (None, "", []):
+                result[k] = v
+        
         return result
 
-    @staticmethod
-    def _include_optional(result: Dict[str, Any], raw: Dict[str, Any]):
-        """Handles all optional keys in one place"""
-        if raw.get("placeholder"):
-            result["placeholder"] = raw["placeholder"]
-
-        if raw.get("dependsOn"):
-            result["dependsOn"] = raw["dependsOn"]
-
-        if raw.get("options"):
-            result["options"] = raw["options"]
-
-        if raw.get("default_value") is not None:
-            result["defaultValue"] = raw["default_value"]
