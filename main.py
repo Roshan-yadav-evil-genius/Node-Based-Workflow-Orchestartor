@@ -6,7 +6,7 @@ from rich import print
 
 if __name__ == "__main__":
     builder = SchemaBuilder()
-    builder.add(Field(
+    country_field = Field(
         type=FieldType.SELECT,
         name="country",
         label="Country",
@@ -31,7 +31,17 @@ if __name__ == "__main__":
                 "value": "United Kingdom"
             }
         ]
-    ))
+    )
+    state_field = Field(
+        type=FieldType.SELECT,
+        name="state",
+        label="State",
+        required=True,
+        placeholder="Select your state",
+        dependsOn=[country_field],
+    )
+    builder.add(country_field)
+    builder.add(state_field)
 
 
     print(builder.build())

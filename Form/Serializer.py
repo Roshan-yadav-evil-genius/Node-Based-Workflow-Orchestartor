@@ -12,7 +12,9 @@ class FieldSerializer:
     def to_dict(field_obj: Field) -> Dict[str, Any]:
         """
         Convert Field to API dict format.
-        Main transformation: default_value -> defaultValue (snake_case to camelCase)
+        Main transformations:
+        - default_value -> defaultValue (snake_case to camelCase)
+        - dependsOn: List[Field] -> List[str] (convert Field objects to field names)
         """
         raw = asdict(field_obj)
         
@@ -21,6 +23,11 @@ class FieldSerializer:
             raw["type"] = raw["type"].value
         else:
             raw["type"] = str(raw["type"])
+        
+        # Convert dependsOn from List[Field] to List[str] (field names)
+        if "dependsOn" in raw and raw["dependsOn"] is not None:
+            # asdict() recursively converts Field objects to dicts, extract 'name' from each
+            raw["dependsOn"] = [dep["name"] for dep in raw["dependsOn"] if isinstance(dep, dict) and "name" in dep]
         
         # Remove None/empty optional fields (matching original behavior)
         result = {}
