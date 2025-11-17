@@ -16,18 +16,7 @@ class FieldSerializer:
         - default_value -> defaultValue (snake_case to camelCase)
         - dependsOn: List[Field] -> List[str] (convert Field objects to field names)
         """
-        raw = asdict(field_obj)
-        
-        # Convert enum to string
-        if isinstance(raw["type"], FieldType):
-            raw["type"] = raw["type"].value
-        else:
-            raw["type"] = str(raw["type"])
-        
-        # Convert dependsOn from List[Field] to List[str] (field names)
-        if "dependsOn" in raw and raw["dependsOn"] is not None:
-            # asdict() recursively converts Field objects to dicts, extract 'name' from each
-            raw["dependsOn"] = [dep["name"] for dep in raw["dependsOn"] if isinstance(dep, dict) and "name" in dep]
+        raw = field_obj.to_dict()
         
         # Remove None/empty optional fields (matching original behavior)
         result = {}

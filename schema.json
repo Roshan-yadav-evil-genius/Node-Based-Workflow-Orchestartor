@@ -1,0 +1,43 @@
+{
+    "fields": [
+        {
+            "type": "select",
+            "name": "country",
+            "label": "Country",
+            "required": true,
+            "placeholder": "Select your country",
+            "options": [
+                {
+                    "label": "India",
+                    "value": "India"
+                },
+                {
+                    "label": "United States",
+                    "value": "United States"
+                },
+                {
+                    "label": "Canada",
+                    "value": "Canada"
+                },
+                {
+                    "label": "United Kingdom",
+                    "value": "United Kingdom"
+                }
+            ],
+            "defaultValue": "India",
+            "dependents": [
+                "state"
+            ]
+        },
+        {
+            "type": "select",
+            "name": "state",
+            "label": "State",
+            "required": true,
+            "placeholder": "Select your state",
+            "dependencies": [
+                "country"
+            ]
+        }
+    ]
+}

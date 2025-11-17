@@ -1,10 +1,11 @@
-from typing import Dict, Any, List, Optional, Union
+from typing import Callable, Dict, Any, List, Optional, Union
 from .Field import Field, FieldType
 from .Serializer import FieldSerializer
 
 class SchemaBuilder:
     def __init__(self):
         self.fields: List[Field] = []
+        self.functions_to_populate_dependent_fields: Dict[str, Callable[[str, Any], Any]] = {} 
 
     def add(self, field: Field) -> "SchemaBuilder":
         
@@ -21,20 +22,15 @@ class SchemaBuilder:
         }
 
     
-    def get_dependent_fields(self, field_name: str) -> List[str]:
-        """
-        Get list of field names that depend on the given field name.
-        
-        Args:
-            field_name: Name of the field to check dependencies for
-            
-        Returns:
-            List of field names that depend on the given field
-        """
-        dependent = []
-        for field in self.fields:
-            if field.dependsOn:
-                # Check if any Field in dependsOn has the matching name
-                if any(dep.name == field_name for dep in field.dependsOn):
-                    dependent.append(field.name)
-        return dependent
+    def register_func_to_populate_dependent_fields(self, field: Field, callback: Callable[[str, Any], Any]) -> Dict[str, Any]:
+        if field.name in self.functions_to_populate_dependent_fields:
+            return self.functions_to_populate_dependent_fields[field.name].append(callback)
+        self.functions_to_populate_dependent_fields[field.name] = [callback]
+        return self
+    
+    def get_dependent_fields(self, field_name: str, values: Any) -> List[Field]:
+        results={}
+        for updated_values in self.functions_to_populate_dependent_fields[field_name]:
+            result = updated_values(field_name, values)
+            results.update(result)
+        return self.results
