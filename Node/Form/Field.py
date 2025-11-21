@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from .FieldType import FieldType
-
+from typing import Callable
 
 @dataclass
 class Field:
@@ -18,6 +18,7 @@ class Field:
     dependents: Optional[List['Field']] = field(default=None, init=False, repr=False) # A dependent is something that relies on you to function.
     options: Optional[List[Dict[str, str]]] = None
     defaultValue: Optional[Any] = None
+    callback: Optional[Callable[[Dict],Dict]] = None
 
     def __post_init__(self):
         """
