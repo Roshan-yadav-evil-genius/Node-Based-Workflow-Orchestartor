@@ -4,11 +4,41 @@ from .Serializer import FieldSerializer
 import warnings
 
 class SchemaBuilder:
+    """
+    Builder class for constructing form schemas.
+    
+    This class provides a fluent interface for building form schemas by
+    adding fields one at a time. It maintains a list of fields and ensures
+    field name uniqueness. Fields can have dependencies on other fields,
+    and the builder can compute values for dependent fields based on
+    provided data.
+    """
     def __init__(self):
+        """
+        Initialize a new SchemaBuilder instance.
+        
+        Creates an empty list of fields that will be populated using
+        the add method.
+        """
         self.fields: List[Field] = []
 
     def add(self, field: Field) -> "SchemaBuilder":
+        """
+        Add a field to the schema builder.
         
+        Adds a field to the schema and ensures field name uniqueness.
+        This method supports method chaining by returning self.
+        
+        Args:
+            field: The Field instance to add to the schema.
+        
+        Returns:
+            SchemaBuilder: Returns self to support method chaining.
+        
+        Raises:
+            ValueError: If a field with the same name already exists
+                in the schema.
+        """
         if any(f.name == field.name for f in self.fields):
             raise ValueError(f"Duplicate field name: '{field.name}'. Field names must be unique.")
         
@@ -17,6 +47,17 @@ class SchemaBuilder:
         return self
 
     def build(self) -> Dict[str, Any]:
+        """
+        Build and return the complete form schema.
+        
+        Serializes all added fields into a dictionary format suitable
+        for JSON serialization. The resulting dictionary contains a
+        'fields' key with a list of serialized field dictionaries.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing the form schema with
+                a 'fields' key mapping to a list of field dictionaries.
+        """
         return {
             "fields": [FieldSerializer.to_dict(f) for f in self.fields]
         }

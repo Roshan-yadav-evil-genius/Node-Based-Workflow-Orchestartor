@@ -33,6 +33,25 @@ class Field:
                         dep.dependents.append(self)
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the Field instance to a dictionary representation.
+        
+        Serializes the field to a dictionary format suitable for JSON
+        serialization. Dependencies and dependents are represented as
+        lists of field names to avoid circular references.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing all field properties:
+                - type: The field type value
+                - name: The field name
+                - label: The field label
+                - required: Whether the field is required
+                - placeholder: The placeholder text
+                - options: List of option dictionaries (if applicable)
+                - defaultValue: The default value (if any)
+                - dependencies: List of dependency field names
+                - dependents: List of dependent field names
+        """
         return {
             "type": self.type.value,
             "name": self.name,
