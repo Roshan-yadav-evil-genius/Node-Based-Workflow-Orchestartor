@@ -4,7 +4,7 @@ from .BaseNode import BaseNode
 
 class Node(BaseNode):
 
-    def _schema(self):
+    def _init_form(self):
         country_field = Field(
             type=FieldType.SELECT,
             name="country",
@@ -19,7 +19,7 @@ class Node(BaseNode):
                 {"label": "United Kingdom", "value": "United Kingdom"},
             ],
         )
-        self._schema_builder.add(country_field)
+        self._form.add(country_field)
 
         state_field = Field(
             type=FieldType.SELECT,
@@ -30,7 +30,7 @@ class Node(BaseNode):
             dependency=[country_field],
             callback=self.populate_state_of_country,
         )
-        self._schema_builder.add(state_field)
+        self._form.add(state_field)
 
         language = Field(
             type=FieldType.TEXT,
@@ -41,9 +41,9 @@ class Node(BaseNode):
             dependency=[country_field],
             callback=self.populate_language_of_country
         )
-        self._schema_builder.add(language)
+        self._form.add(language)
 
-        return self._schema_builder
+        return self._form
 
     def populate_state_of_country(self, data: Dict) -> Dict:
         selected_country = data.get("country")

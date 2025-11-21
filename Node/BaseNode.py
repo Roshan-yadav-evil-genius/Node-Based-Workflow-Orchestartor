@@ -5,20 +5,16 @@ from abc import ABC,abstractmethod
 
 class BaseNode(ABC):
     def __init__(self):
-        self._schema_builder = SchemaBuilder()
-        self._schema()
+        self._form = SchemaBuilder()
+        
+        self._init_form()
     
     @abstractmethod
-    def _schema(self)->Dict:
-        pass
+    def _init_form(self)->Dict:
+        raise NotImplementedError
 
-    def schema(self) -> Dict[str, Any]:
-        return self._schema_builder.build()
+    def form_schema(self) -> Dict[str, Any]:
+        return self._form.build()
 
     def get_populated_field_value(self, data: Dict) -> Dict:
-        result={}
-        for field_name,_ in data.items():
-            field_instance = self._schema_builder.get_instance_by_name(field_name)
-            for dependent_field in field_instance.dependents:
-                result[dependent_field.name]=dependent_field.callback(data)
-        return result
+        return self._form.get_populated_field_value(data)
