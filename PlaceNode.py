@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
-from .Form.Field import Field, FieldType
-from .BaseNode import BaseNode
+from Node.Form.Field import Field, FieldType
+from Node.BaseNode import BaseNode
 
-class Node(BaseNode):
+class PlaceNode(BaseNode):
     """
     Concrete implementation of BaseNode for country, state, and language selection.
     
