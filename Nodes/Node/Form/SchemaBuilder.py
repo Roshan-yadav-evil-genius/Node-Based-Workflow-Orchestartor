@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Any, List, Optional, Union
 from .Field import Field, FieldType
 from .Serializer import FieldSerializer
-import warnings
 
 class SchemaBuilder:
     """
@@ -84,3 +83,17 @@ class SchemaBuilder:
                 for dependent_field in field_instance.dependents:
                     result[dependent_field.name] = dependent_field.callback(data)
         return result
+    
+    def populate_values(self, filled_form: Dict) -> None:
+        """
+        Populate the form fields with values from the provided filled_form dictionary.
+
+        Args:
+            filled_form (Dict): A dictionary mapping field names to values.
+
+        This will assign 'value' on each Field object if the name matches.
+        """
+        for field_name, field_value in filled_form.items():
+            field_instance = self.get_instance_by_name(field_name)
+            if field_instance is not None:
+                field_instance.value = field_value

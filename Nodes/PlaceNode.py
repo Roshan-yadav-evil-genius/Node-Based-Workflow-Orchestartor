@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
-from Node.Form.Field import Field, FieldType
-from Node.BaseNode import BaseNode
+from .Node.Form.Field import Field, FieldType
+from .Node.Node import Node
 
-class PlaceNode(BaseNode):
+class PlaceNode(Node):
     """
     Concrete implementation of BaseNode for country, state, and language selection.
     
@@ -11,18 +11,23 @@ class PlaceNode(BaseNode):
     country and are populated dynamically using callback functions.
     """
 
+    @property
+    def identifier(self) -> str:
+        return "place"
+    
+    @property
+    def label(self) -> str:
+        return "Place"
+    
+    @property
+    def description(self) -> str:
+        return "Node for selecting country, state, and language"
+    
+    @property
+    def icon(self) -> str:
+        return "place-icon"
+
     def _init_form(self):
-        """
-        Initialize the form with country, state, and language fields.
-        
-        Creates three form fields:
-        - country: A select field with predefined country options
-        - state: A select field that depends on the country selection
-        - language: A text field that depends on the country selection
-        
-        Returns:
-            SchemaBuilder: The form builder instance with all fields added.
-        """
         country_field = Field(
             type=FieldType.SELECT,
             name="country",
@@ -64,17 +69,6 @@ class PlaceNode(BaseNode):
         return self._form
 
     def populate_state_of_country(self, data: Dict) -> Dict:
-        """
-        Populate state options based on the selected country.
-        
-        Args:
-            data: A dictionary containing form data, expected to have a
-                'country' key with the selected country name.
-        
-        Returns:
-            List[str]: A list of state names for the selected country.
-                Returns an empty list if the country is not recognized.
-        """
         selected_country = data.get("country")
         if selected_country == "India":
             return ["Maharashtra", "Tamil Nadu", "Kerala"]
@@ -87,17 +81,6 @@ class PlaceNode(BaseNode):
         return []
 
     def populate_language_of_country(self, data: Dict):
-        """
-        Populate language value based on the selected country.
-        
-        Args:
-            data: A dictionary containing form data, expected to have a
-                'country' key with the selected country name.
-        
-        Returns:
-            str: The language associated with the selected country.
-                Returns an empty string if the country is not recognized.
-        """
         selected_country = data.get("country")
         if selected_country == "India":
             return "Hindi"
