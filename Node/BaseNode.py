@@ -6,10 +6,10 @@ from abc import ABC,abstractmethod
 class BaseNode(ABC):
     def __init__(self):
         self._schema_builder = SchemaBuilder()
-        self._init_node_schema()
+        self._schema()
     
     @abstractmethod
-    def _init_node_schema(self)->Dict:
+    def _schema(self)->Dict:
         pass
 
     def schema(self) -> Dict[str, Any]:

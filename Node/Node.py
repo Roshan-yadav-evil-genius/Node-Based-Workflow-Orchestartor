@@ -4,7 +4,7 @@ from .BaseNode import BaseNode
 
 class Node(BaseNode):
 
-    def _init_node_schema(self):
+    def _schema(self):
         country_field = Field(
             type=FieldType.SELECT,
             name="country",
