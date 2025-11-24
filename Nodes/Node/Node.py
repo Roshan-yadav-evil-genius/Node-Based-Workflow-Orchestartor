@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Dict, Any
 from .BaseNodeProperty import BaseNodeProperty
 from .BaseNodeForm import BaseNodeForm
@@ -21,4 +22,8 @@ class Node(BaseNodeProperty, BaseNodeForm):
         """
         
         BaseNodeForm.__init__(self)
-    
+
+
+    @abstractmethod
+    async def main(self):
+        pass
