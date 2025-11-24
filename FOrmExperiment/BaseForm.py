@@ -1,7 +1,6 @@
 import django
 from django.conf import settings
 from django import forms
-from abc import ABC, abstractmethod
 
 # Configure Django settings
 if not settings.configured:
@@ -16,7 +15,7 @@ if not settings.configured:
     django.setup()
 
 
-class BaseForm(forms.Form, ABC):
+class BaseForm(forms.Form):
     """
     Base form class that provides cascading field dependency functionality.
     All forms with dependent fields should inherit from this class.
@@ -31,10 +30,10 @@ class BaseForm(forms.Form, ABC):
         self._incremental_data = {}
         self._initialize_dependent_fields()
     
-    @abstractmethod
     def get_field_dependencies(self):
         """
         REQUIRED: Define field dependencies.
+        Child classes must implement this method.
         
         Returns:
             dict: Mapping of parent_field -> [dependent_field1, dependent_field2, ...]
@@ -44,10 +43,10 @@ class BaseForm(forms.Form, ABC):
             "Child class must implement get_field_dependencies() method"
         )
     
-    @abstractmethod
     def populate_field(self, field_name, parent_value):
         """
         REQUIRED: Populate choices for a dependent field based on parent value.
+        Child classes must implement this method.
         
         Args:
             field_name: Name of the dependent field to populate
