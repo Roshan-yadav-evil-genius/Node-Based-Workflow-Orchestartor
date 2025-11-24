@@ -146,18 +146,42 @@ class FormSerializer:
         
         return result
     
-    def to_json(self) -> List[Dict[str, Any]]:
+    def _get_non_field_errors(self) -> List[str]:
         """
-        Serialize entire form to JSON.
-        Single responsibility: Convert form to list of field JSON objects.
+        Extract non-field (global) errors from the form.
+        Single responsibility: Retrieve form-level errors not associated with specific fields.
         
         Returns:
-            List of dictionaries, each representing a form field
+            List of error message strings
         """
-        form_state = []
+        # Django stores non-field errors in form.non_field_errors() or form.errors.get('__all__', [])
+        non_field_errors = self.form.non_field_errors()
+        return list(non_field_errors) if non_field_errors else []
+    
+    def to_json(self) -> Dict[str, Any]:
+        """
+        Serialize entire form to JSON.
+        Single responsibility: Convert form to JSON structure with fields and global errors.
+        
+        Returns:
+            Dictionary containing:
+            - 'fields': List of field JSON objects
+            - 'non_field_errors': List of global error messages (if any)
+        """
+        form_state = {
+            'fields': []
+        }
+        
+        # Serialize all fields
         for field in self.form:
             field_json = self._serialize_field(field)
-            form_state.append(field_json)
+            form_state['fields'].append(field_json)
+        
+        # Add non-field errors if they exist
+        non_field_errors = self._get_non_field_errors()
+        if non_field_errors:
+            form_state['non_field_errors'] = non_field_errors
+        
         return form_state
 
 
