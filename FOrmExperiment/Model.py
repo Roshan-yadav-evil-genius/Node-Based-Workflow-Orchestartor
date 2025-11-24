@@ -100,6 +100,7 @@ class ContactForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._incremental_data = {}
         self._initialize_dependent_fields()
     
     def _get_field_value(self, field_name):
@@ -126,12 +127,12 @@ class ContactForm(forms.Form):
         - State -> Languages
         """
         # Initialize states based on country
-        country_value = self._get_field_value('country')
+        country_value = self.get_field_value('country')
         if country_value:
             self.populate_states(country_value)
         
         # Initialize languages based on state
-        state_value = self._get_field_value('state')
+        state_value = self.get_field_value('state')
         if country_value and state_value:
             self.populate_languages(state_value)
     
@@ -154,3 +155,105 @@ class ContactForm(forms.Form):
             self.fields['language'].choices = LANGUAGE_DATA[state_value]
         else:
             self.fields['language'].choices = []
+    
+    def _update_incremental_data(self, field_name, value):
+        """
+        Manage incremental data storage.
+        Single responsibility: Store field values for incremental updates.
+        
+        Args:
+            field_name: Name of the field to update
+            value: Value to store for the field
+        """
+        self._incremental_data[field_name] = value
+    
+    def _rebind_form(self):
+        """
+        Rebind form with updated data.
+        Single responsibility: Merge incremental data with existing form data and rebind.
+        """
+        # Merge incremental data with existing data
+        updated_data = {}
+        if self.is_bound and self.data:
+            # Convert QueryDict to dict if needed
+            if hasattr(self.data, 'dict'):
+                updated_data.update(self.data.dict())
+            else:
+                updated_data.update(dict(self.data))
+        updated_data.update(self._incremental_data)
+        
+        # Rebind the form with updated data
+        self.data = updated_data
+        self.is_bound = True
+    
+    def _clear_dependent_fields(self, parent_field):
+        """
+        Clear child fields when parent changes.
+        Single responsibility: Remove values and reset choices for dependent fields.
+        
+        Args:
+            parent_field: Name of the parent field that changed
+        """
+        if parent_field == 'country':
+            # Clear state and language when country changes
+            self._incremental_data.pop('state', None)
+            self._incremental_data.pop('language', None)
+            self.fields['state'].choices = []
+            self.fields['language'].choices = []
+        elif parent_field == 'state':
+            # Clear language when state changes
+            self._incremental_data.pop('language', None)
+            self.fields['language'].choices = []
+    
+    def _handle_field_dependencies(self, field_name, value):
+        """
+        Handle cascading updates when parent fields change.
+        Single responsibility: Determine and trigger dependent field updates.
+        
+        Args:
+            field_name: Name of the field that was updated
+            value: New value of the field
+        """
+        if field_name == 'country':
+            # Clear dependent fields first
+            self._clear_dependent_fields('country')
+            # Populate states based on country
+            self.populate_states(value)
+        elif field_name == 'state':
+            # Clear dependent fields first
+            self._clear_dependent_fields('state')
+            # Populate languages based on state
+            self.populate_languages(value)
+    
+    def update_field(self, field_name, value):
+        """
+        Public interface for updating fields incrementally.
+        Single responsibility: Orchestrate the update process by calling specialized methods.
+        
+        Args:
+            field_name: Name of the field to update
+            value: Value to set for the field
+        """
+        # Store the value
+        self._update_incremental_data(field_name, value)
+        # Rebind form with updated data
+        self._rebind_form()
+        # Handle dependent field updates
+        self._handle_field_dependencies(field_name, value)
+    
+    def get_field_value(self, field_name):
+        """
+        Get current field value from any source.
+        Single responsibility: Retrieve field value, checking incremental data first.
+        
+        Args:
+            field_name: Name of the field to retrieve
+            
+        Returns:
+            Field value if found, None otherwise
+        """
+        # Check incremental data first (most recent)
+        if field_name in self._incremental_data:
+            return self._incremental_data[field_name]
+        # Fall back to regular field value retrieval
+        return self._get_field_value(field_name)
