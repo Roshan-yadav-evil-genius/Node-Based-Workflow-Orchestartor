@@ -1,44 +1,62 @@
 from typing import Dict, Any
 from abc import ABC, abstractmethod
-from .Form.SchemaBuilder import SchemaBuilder
+from .Form.BaseForm import BaseForm
 
 
 class BaseNodeForm(ABC):
     """
-    Abstract base class for form schema management.
+    Abstract base class for form schema management using Django forms.
     
     This class provides functionality for building and managing form schemas
-    using a SchemaBuilder. Subclasses must implement the _init_form method
-    to define their specific form structure.
+    using Django forms. Subclasses should define a nested Form class that
+    inherits from BaseForm with fields as class attributes.
     """
     
     def __init__(self):
         """
-        Initialize the BaseNodeForm with a SchemaBuilder instance.
+        Initialize the BaseNodeForm with a Django Form instance.
         
-        Creates a new SchemaBuilder and calls _init_form to set up the form
-        structure defined by the subclass.
+        Detects the nested Form class in the subclass and instantiates it
+        with a reference to this node instance for callback resolution.
         """
-        self._form = SchemaBuilder()
-        self._init_form()
+        # Get the Form class from the subclass
+        form_class = self._get_form_class()
+        if form_class is None:
+            raise ValueError(
+                f"{self.__class__.__name__} must define a nested Form class "
+                "that inherits from BaseForm"
+            )
+        
+        # Instantiate the form with reference to this node
+        self._form = form_class(node_instance=self)
     
-    @abstractmethod
-    def _init_form(self) -> Dict:
+    def _get_form_class(self):
         """
-        Initialize the form schema for this node.
-        
-        This abstract method must be implemented by subclasses to define
-        the form fields and their configurations. It should add fields to
-        self._form using the SchemaBuilder's add method.
+        Get the nested Form class from the subclass.
         
         Returns:
-            Dict: The form schema dictionary (typically returned by
-                self._form.build() or self._form itself).
-        
-        Raises:
-            NotImplementedError: If not implemented by a subclass.
+            type: The Form class if found, None otherwise
         """
-        raise NotImplementedError
+        # Look for a nested Form class
+        for attr_name in dir(self.__class__):
+            attr = getattr(self.__class__, attr_name)
+            if (isinstance(attr, type) and 
+                issubclass(attr, BaseForm) and 
+                attr is not BaseForm):
+                return attr
+        return None
+    
+    def _init_form(self) -> Dict:
+        """
+        DEPRECATED: No longer needed with Django forms.
+        
+        Kept for backward compatibility. Subclasses can override this
+        to return an empty dict or implement custom logic if needed.
+        
+        Returns:
+            Dict: Empty dictionary (or custom implementation)
+        """
+        return {}
 
     def form_schema(self) -> Dict[str, Any]:
         """
@@ -49,7 +67,7 @@ class BaseNodeForm(ABC):
                 all fields and their configurations. The dictionary has a
                 'fields' key containing a list of field dictionaries.
         """
-        return self._form.build()
+        return self._form.form_schema()
 
     def get_populated_field_value(self, data: Dict) -> Dict:
         """
@@ -72,8 +90,8 @@ class BaseNodeForm(ABC):
         """
         Populate the form fields with values from the provided filled_form dictionary.
         
-        This method assigns values to the corresponding Field objects in the form
-        schema based on the field names in the provided dictionary.
+        This method assigns values to the corresponding fields in the form
+        based on the field names in the provided dictionary.
         
         Args:
             filled_form: A dictionary mapping field names to values that should
