@@ -13,7 +13,8 @@ from Model import ContactForm
 #     form_state.append(field_json)
 # print(form_state)
 
-form = ContactForm(data=dict(country="india"))
+form = ContactForm(data=dict(country="india",state="maharashtra1"))
+
 form_state=[]
 for x in form:
     field_json = parse_field_to_json(x)
