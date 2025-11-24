@@ -9,124 +9,195 @@ from bs4 import BeautifulSoup
 from typing import Any, Dict, List, Optional
 
 
+class FormSerializer:
+    """
+    Serializes Django form instances to JSON representation.
+    Each method follows the Single Responsibility Principle.
+    """
+    
+    def __init__(self, form):
+        """
+        Initialize FormSerializer with a Django form instance.
+        
+        Args:
+            form: Django form instance to serialize
+        """
+        self.form = form
+    
+    def _normalize_attribute_value(self, attr_value: Any) -> Any:
+        """
+        Normalize HTML attribute values to appropriate Python types.
+        Single responsibility: Convert attribute values to appropriate types.
+        
+        Converts:
+        - Lists to strings (space-separated) or single values
+        - Empty/None values to True (boolean attributes)
+        - Numeric strings to int or float
+        - Other values remain as-is
+        
+        Args:
+            attr_value: The raw attribute value from HTML parsing
+            
+        Returns:
+            Normalized value (int, float, bool, str, or list)
+        """
+        if isinstance(attr_value, list):
+            if len(attr_value) > 1:
+                return ' '.join(attr_value)
+            elif len(attr_value) == 1:
+                return attr_value[0]
+            else:
+                return True
+        elif attr_value is None or attr_value == '':
+            return True
+        elif isinstance(attr_value, str):
+            if attr_value.isdigit():
+                return int(attr_value)
+            elif attr_value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                return float(attr_value)
+        return attr_value
+    
+    def _extract_select_options(self, select_tag: Any) -> List[Dict[str, Any]]:
+        """
+        Extract option elements from a select tag.
+        Single responsibility: Extract options from select elements.
+        
+        Args:
+            select_tag: BeautifulSoup Tag object representing a select element
+            
+        Returns:
+            List of dictionaries, each containing:
+            - 'value': The option's value attribute
+            - 'text': The option's display text
+            - 'selected': True if the option is selected (optional)
+        """
+        options = []
+        for option in select_tag.find_all('option'):
+            option_data = {
+                'value': option.get('value', ''),
+                'text': option.get_text(strip=True)
+            }
+            if option.get('selected'):
+                option_data['selected'] = True
+            options.append(option_data)
+        return options
+    
+    def _extract_tag_attributes(self, tag: Any) -> Dict[str, Any]:
+        """
+        Extract and normalize all attributes from an HTML tag.
+        Single responsibility: Extract and normalize tag attributes.
+        
+        Args:
+            tag: BeautifulSoup Tag object
+            
+        Returns:
+            Dictionary of normalized attribute name-value pairs
+        """
+        attributes = {}
+        for attr_name, attr_value in tag.attrs.items():
+            attributes[attr_name] = self._normalize_attribute_value(attr_value)
+        return attributes
+    
+    def _serialize_field(self, field: Any) -> Dict[str, Any]:
+        """
+        Serialize a single form field to JSON.
+        Single responsibility: Convert a form field to JSON dictionary.
+        
+        Extracts:
+        - Tag name (input, select, textarea, etc.)
+        - Field label
+        - Field errors
+        - All HTML attributes (normalized)
+        - Current field value
+        - Options (for select elements)
+        
+        Args:
+            field: Django form field (BoundField instance)
+            
+        Returns:
+            Dictionary containing parsed field information
+        """
+        soup = BeautifulSoup(str(field), 'html.parser')
+        tag = soup.find()
+        
+        if not tag:
+            return {}
+        
+        result = {
+            'tag': tag.name,
+            'label': str(field.label) if field.label else '',
+            'errors': list(field.errors) if field.errors else []
+        }
+        
+        # Extract and normalize tag attributes
+        attributes = self._extract_tag_attributes(tag)
+        result.update(attributes)
+        
+        # Extract current field value
+        field_value = field.value()
+        if field_value is not None:
+            result['value'] = field_value
+        
+        # Handle select elements - extract options
+        if tag.name == 'select':
+            options = self._extract_select_options(tag)
+            if options:
+                result['options'] = options
+        
+        return result
+    
+    def to_json(self) -> List[Dict[str, Any]]:
+        """
+        Serialize entire form to JSON.
+        Single responsibility: Convert form to list of field JSON objects.
+        
+        Returns:
+            List of dictionaries, each representing a form field
+        """
+        form_state = []
+        for field in self.form:
+            field_json = self._serialize_field(field)
+            form_state.append(field_json)
+        return form_state
+
+
+# Backward compatibility functions (deprecated, use FormSerializer instead)
 def normalize_attribute_value(attr_value: Any) -> Any:
     """
     Normalize HTML attribute values to appropriate Python types.
-    
-    Converts:
-    - Lists to strings (space-separated) or single values
-    - Empty/None values to True (boolean attributes)
-    - Numeric strings to int or float
-    - Other values remain as-is
-    
-    Args:
-        attr_value: The raw attribute value from HTML parsing
-        
-    Returns:
-        Normalized value (int, float, bool, str, or list)
+    DEPRECATED: Use FormSerializer._normalize_attribute_value() instead.
     """
-    if isinstance(attr_value, list):
-        if len(attr_value) > 1:
-            return ' '.join(attr_value)
-        elif len(attr_value) == 1:
-            return attr_value[0]
-        else:
-            return True
-    elif attr_value is None or attr_value == '':
-        return True
-    elif isinstance(attr_value, str):
-        if attr_value.isdigit():
-            return int(attr_value)
-        elif attr_value.replace('.', '', 1).replace('-', '', 1).isdigit():
-            return float(attr_value)
-    return attr_value
+    # Create a temporary instance (form is not needed for this method)
+    serializer = FormSerializer(None)
+    return serializer._normalize_attribute_value(attr_value)
 
 
 def extract_select_options(select_tag: Any) -> List[Dict[str, Any]]:
     """
     Extract option elements from a select tag.
-    
-    Args:
-        select_tag: BeautifulSoup Tag object representing a select element
-        
-    Returns:
-        List of dictionaries, each containing:
-        - 'value': The option's value attribute
-        - 'text': The option's display text
-        - 'selected': True if the option is selected (optional)
+    DEPRECATED: Use FormSerializer._extract_select_options() instead.
     """
-    options = []
-    for option in select_tag.find_all('option'):
-        option_data = {
-            'value': option.get('value', ''),
-            'text': option.get_text(strip=True)
-        }
-        if option.get('selected'):
-            option_data['selected'] = True
-        options.append(option_data)
-    return options
+    # Create a temporary instance (form is not needed for this method)
+    serializer = FormSerializer(None)
+    return serializer._extract_select_options(select_tag)
 
 
 def extract_tag_attributes(tag: Any) -> Dict[str, Any]:
     """
     Extract and normalize all attributes from an HTML tag.
-    
-    Args:
-        tag: BeautifulSoup Tag object
-        
-    Returns:
-        Dictionary of normalized attribute name-value pairs
+    DEPRECATED: Use FormSerializer._extract_tag_attributes() instead.
     """
-    attributes = {}
-    for attr_name, attr_value in tag.attrs.items():
-        attributes[attr_name] = normalize_attribute_value(attr_value)
-    return attributes
+    # Create a temporary instance (form is not needed for this method)
+    serializer = FormSerializer(None)
+    return serializer._extract_tag_attributes(tag)
 
 
 def parse_field_to_json(field: Any) -> Dict[str, Any]:
     """
     Parse a Django form field into a JSON-serializable dictionary.
-    
-    Extracts:
-    - Tag name (input, select, textarea, etc.)
-    - Field label
-    - Field errors
-    - All HTML attributes (normalized)
-    - Current field value
-    - Options (for select elements)
-    
-    Args:
-        field: Django form field (BoundField instance)
-        
-    Returns:
-        Dictionary containing parsed field information
+    DEPRECATED: Use FormSerializer._serialize_field() instead.
     """
-    soup = BeautifulSoup(str(field), 'html.parser')
-    tag = soup.find()
-    
-    if not tag:
-        return {}
-    
-    result = {
-        'tag': tag.name,
-        'label': str(field.label) if field.label else '',
-        'errors': list(field.errors) if field.errors else []
-    }
-    
-    # Extract and normalize tag attributes
-    attributes = extract_tag_attributes(tag)
-    result.update(attributes)
-    
-    # Extract current field value
-    field_value = field.value()
-    if field_value is not None:
-        result['value'] = field_value
-    
-    # Handle select elements - extract options
-    if tag.name == 'select':
-        options = extract_select_options(tag)
-        if options:
-            result['options'] = options
-    
-    return result
+    # Create a temporary instance (form is not needed for this method)
+    serializer = FormSerializer(None)
+    return serializer._serialize_field(field)
 

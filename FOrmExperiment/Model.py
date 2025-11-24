@@ -240,6 +240,8 @@ class ContactForm(forms.Form):
         self._rebind_form()
         # Handle dependent field updates
         self._handle_field_dependencies(field_name, value)
+        # Validate the updated field
+        self._validate_field(field_name)
     
     def get_field_value(self, field_name):
         """
@@ -257,3 +259,61 @@ class ContactForm(forms.Form):
             return self._incremental_data[field_name]
         # Fall back to regular field value retrieval
         return self._get_field_value(field_name)
+    
+    def _validate_field(self, field_name):
+        """
+        Validate a single field.
+        Single responsibility: Validate a specific field and store errors.
+        
+        Args:
+            field_name: Name of the field to validate
+            
+        Returns:
+            bool: True if field is valid, False otherwise
+        """
+        if field_name not in self.fields:
+            return False
+        
+        # Get the field value
+        field_value = self.get_field_value(field_name)
+        
+        # Clear previous errors for this field
+        # Access _errors directly to avoid triggering full validation
+        if hasattr(self, '_errors') and self._errors and field_name in self._errors:
+            del self._errors[field_name]
+        
+        # Validate the field
+        try:
+            # Use Django's field validation
+            self.fields[field_name].clean(field_value)
+            return True
+        except forms.ValidationError as e:
+            # Store validation errors
+            # Initialize _errors if it doesn't exist
+            if not hasattr(self, '_errors') or self._errors is None:
+                from django.forms.utils import ErrorDict
+                self._errors = ErrorDict()
+            # Store the error messages
+            self._errors[field_name] = self.error_class(e.messages)
+            return False
+    
+    def validate(self):
+        """
+        Trigger full form validation.
+        Single responsibility: Validate all form fields.
+        
+        Returns:
+            bool: True if form is valid, False otherwise
+        """
+        self.full_clean()
+        return self.is_valid()
+    
+    def get_errors(self):
+        """
+        Get all form errors after validation.
+        Single responsibility: Retrieve validation errors.
+        
+        Returns:
+            dict: Dictionary of field names to error lists
+        """
+        return self.errors
