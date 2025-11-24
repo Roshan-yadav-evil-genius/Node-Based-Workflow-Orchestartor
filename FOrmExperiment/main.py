@@ -1,6 +1,6 @@
 from rich import print
 from FormSerializer import FormSerializer
-from Model import ContactForm
+from ContactForm import ContactForm
 
 
 form = ContactForm()

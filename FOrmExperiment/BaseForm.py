@@ -1,6 +1,7 @@
 import django
 from django.conf import settings
 from django import forms
+from abc import ABC, abstractmethod
 
 # Configure Django settings
 if not settings.configured:
@@ -14,94 +15,51 @@ if not settings.configured:
     )
     django.setup()
 
-# State data mapping for countries
-STATE_DATA = {
-    "india": [
-        ("maharashtra", "Maharashtra"),
-        ("karnataka", "Karnataka"),
-        ("tamil_nadu", "Tamil Nadu"),
-        ("gujarat", "Gujarat"),
-        ("rajasthan", "Rajasthan"),
-    ],
-    "usa": [
-        ("california", "California"),
-        ("texas", "Texas"),
-        ("new_york", "New York"),
-        ("florida", "Florida"),
-        ("illinois", "Illinois"),
-    ]
-}
 
-# Language data mapping for states
-LANGUAGE_DATA = {
-    "maharashtra": [
-        ("marathi", "Marathi"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ],
-    "karnataka": [
-        ("kannada", "Kannada"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ],
-    "tamil_nadu": [
-        ("tamil", "Tamil"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ],
-    "gujarat": [
-        ("gujarati", "Gujarati"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ],
-    "rajasthan": [
-        ("rajasthani", "Rajasthani"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ],
-    "california": [
-        ("english", "English"),
-        ("spanish", "Spanish"),
-        ("chinese", "Chinese"),
-    ],
-    "texas": [
-        ("english", "English"),
-        ("spanish", "Spanish"),
-    ],
-    "new_york": [
-        ("english", "English"),
-        ("spanish", "Spanish"),
-        ("chinese", "Chinese"),
-    ],
-    "florida": [
-        ("english", "English"),
-        ("spanish", "Spanish"),
-    ],
-    "illinois": [
-        ("english", "English"),
-        ("spanish", "Spanish"),
-        ("polish", "Polish"),
-    ],
-}
-
-class ContactForm(forms.Form):
-    # subject = forms.CharField(max_length=100)
-    # message = forms.CharField(widget=forms.Textarea)
-    # sender = forms.EmailField()
-    # cc_myself = forms.BooleanField(required=False)
-    COUNTRY_DATA=[
-        ("india","India"),
-        ("usa","USA")
-    ]
-    # Base fields with empty choices — we will fill these in __init__
-    country = forms.ChoiceField(choices=COUNTRY_DATA )
-    state = forms.ChoiceField(choices=[])
-    language = forms.ChoiceField(choices=[])
+class BaseForm(forms.Form, ABC):
+    """
+    Base form class that provides cascading field dependency functionality.
+    All forms with dependent fields should inherit from this class.
+    
+    Child forms MUST implement:
+    1. get_field_dependencies() - Returns mapping of parent fields to dependent fields
+    2. populate_field(field_name, parent_value) - Returns choices for dependent field
+    """
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._incremental_data = {}
         self._initialize_dependent_fields()
+    
+    @abstractmethod
+    def get_field_dependencies(self):
+        """
+        REQUIRED: Define field dependencies.
+        
+        Returns:
+            dict: Mapping of parent_field -> [dependent_field1, dependent_field2, ...]
+            Example: {'country': ['state'], 'state': ['language']}
+        """
+        raise NotImplementedError(
+            "Child class must implement get_field_dependencies() method"
+        )
+    
+    @abstractmethod
+    def populate_field(self, field_name, parent_value):
+        """
+        REQUIRED: Populate choices for a dependent field based on parent value.
+        
+        Args:
+            field_name: Name of the dependent field to populate
+            parent_value: Value of the parent field
+            
+        Returns:
+            list: List of tuples (value, label) for the dependent field
+            Example: [('maharashtra', 'Maharashtra'), ('karnataka', 'Karnataka')]
+        """
+        raise NotImplementedError(
+            "Child class must implement populate_field(field_name, parent_value) method"
+        )
     
     def _get_field_value(self, field_name):
         """
@@ -122,39 +80,45 @@ class ContactForm(forms.Form):
     def _initialize_dependent_fields(self):
         """
         Initialize dependent fields based on parent field values.
-        This method handles the cascade of field dependencies:
-        - Country -> States
-        - State -> Languages
+        This method automatically handles cascading dependencies.
         """
-        # Initialize states based on country
-        country_value = self.get_field_value('country')
-        if country_value:
-            self.populate_states(country_value)
+        dependencies = self.get_field_dependencies()
+        processed_fields = set()
         
-        # Initialize languages based on state
-        state_value = self.get_field_value('state')
-        if country_value and state_value:
-            self.populate_languages(state_value)
+        def process_field(field_name):
+            """Recursively process field and its dependencies."""
+            if field_name in processed_fields:
+                return
+            
+            field_value = self.get_field_value(field_name)
+            if field_value:
+                # Update dependent fields
+                self._update_dependent_field(field_name, field_value, dependencies)
+            
+            processed_fields.add(field_name)
+            
+            # Process dependent fields recursively
+            if field_name in dependencies:
+                for dependent_field in dependencies[field_name]:
+                    process_field(dependent_field)
+        
+        # Start processing from all parent fields (fields that have dependencies)
+        for parent_field in dependencies.keys():
+            process_field(parent_field)
     
-    def populate_states(self, country_value):
+    def _update_dependent_field(self, parent_field, parent_value, dependencies=None):
         """
-        Connected function that populates states based on selected country.
-        This is called automatically when country field is set.
+        Update a dependent field based on parent field value.
+        Calls populate_field() which should be implemented by child classes.
         """
-        if country_value in STATE_DATA:
-            self.fields['state'].choices = STATE_DATA[country_value]
-        else:
-            self.fields['state'].choices = []
-    
-    def populate_languages(self, state_value):
-        """
-        Connected function that populates languages based on selected state.
-        This is called automatically when state field is set.
-        """
-        if state_value in LANGUAGE_DATA:
-            self.fields['language'].choices = LANGUAGE_DATA[state_value]
-        else:
-            self.fields['language'].choices = []
+        if dependencies is None:
+            dependencies = self.get_field_dependencies()
+        
+        if parent_field in dependencies:
+            for dependent_field in dependencies[parent_field]:
+                choices = self.populate_field(dependent_field, parent_value)
+                if dependent_field in self.fields:
+                    self.fields[dependent_field].choices = choices
     
     def _update_incremental_data(self, field_name, value):
         """
@@ -186,24 +150,27 @@ class ContactForm(forms.Form):
         self.data = updated_data
         self.is_bound = True
     
-    def _clear_dependent_fields(self, parent_field):
+    def _clear_dependent_fields(self, parent_field, dependencies=None):
         """
         Clear child fields when parent changes.
-        Single responsibility: Remove values and reset choices for dependent fields.
+        Recursively clears all dependent fields in the dependency chain.
         
         Args:
             parent_field: Name of the parent field that changed
+            dependencies: Optional dependencies dict (if None, calls get_field_dependencies())
         """
-        if parent_field == 'country':
-            # Clear state and language when country changes
-            self._incremental_data.pop('state', None)
-            self._incremental_data.pop('language', None)
-            self.fields['state'].choices = []
-            self.fields['language'].choices = []
-        elif parent_field == 'state':
-            # Clear language when state changes
-            self._incremental_data.pop('language', None)
-            self.fields['language'].choices = []
+        if dependencies is None:
+            dependencies = self.get_field_dependencies()
+        
+        if parent_field in dependencies:
+            for dependent_field in dependencies[parent_field]:
+                # Clear the dependent field value
+                self._incremental_data.pop(dependent_field, None)
+                # Reset choices
+                if dependent_field in self.fields:
+                    self.fields[dependent_field].choices = []
+                # Recursively clear fields that depend on this dependent field
+                self._clear_dependent_fields(dependent_field, dependencies)
     
     def _handle_field_dependencies(self, field_name, value):
         """
@@ -214,16 +181,13 @@ class ContactForm(forms.Form):
             field_name: Name of the field that was updated
             value: New value of the field
         """
-        if field_name == 'country':
+        dependencies = self.get_field_dependencies()
+        
+        if field_name in dependencies:
             # Clear dependent fields first
-            self._clear_dependent_fields('country')
-            # Populate states based on country
-            self.populate_states(value)
-        elif field_name == 'state':
-            # Clear dependent fields first
-            self._clear_dependent_fields('state')
-            # Populate languages based on state
-            self.populate_languages(value)
+            self._clear_dependent_fields(field_name, dependencies)
+            # Update dependent fields
+            self._update_dependent_field(field_name, value, dependencies)
     
     def _is_value_changed(self, field_name, new_value):
         """
@@ -251,6 +215,7 @@ class ContactForm(forms.Form):
     def update_field(self, field_name, value):
         """
         Public interface for updating fields incrementally.
+        Automatically handles dependent field updates.
         Single responsibility: Orchestrate the update process by calling specialized methods.
         
         Args:
