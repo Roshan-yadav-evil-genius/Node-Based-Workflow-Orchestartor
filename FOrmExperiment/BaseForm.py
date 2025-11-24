@@ -1,6 +1,9 @@
 import django
 from django.conf import settings
 from django import forms
+from django.forms.forms import DeclarativeFieldsMetaclass
+from abc import ABCMeta
+from DependencyInjector import DependencyInjector
 
 # Configure Django settings
 if not settings.configured:
@@ -15,11 +18,18 @@ if not settings.configured:
     django.setup()
 
 
-class BaseForm(forms.Form):
+# Create a custom metaclass that combines Django's form metaclass with ABCMeta
+class FormABCMeta(DeclarativeFieldsMetaclass, ABCMeta):
+    """Metaclass that combines Django's form metaclass with ABCMeta."""
+    pass
+
+
+class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
     """
     Base form class that provides cascading field dependency functionality.
     All forms with dependent fields should inherit from this class.
     
+    This class combines Django's Form with DependencyInjector mixin.
     Child forms MUST implement:
     1. get_field_dependencies() - Returns mapping of parent fields to dependent fields
     2. populate_field(field_name, parent_value) - Returns choices for dependent field
@@ -29,36 +39,6 @@ class BaseForm(forms.Form):
         super().__init__(*args, **kwargs)
         self._incremental_data = {}
         self._initialize_dependent_fields()
-    
-    def get_field_dependencies(self):
-        """
-        REQUIRED: Define field dependencies.
-        Child classes must implement this method.
-        
-        Returns:
-            dict: Mapping of parent_field -> [dependent_field1, dependent_field2, ...]
-            Example: {'country': ['state'], 'state': ['language']}
-        """
-        raise NotImplementedError(
-            "Child class must implement get_field_dependencies() method"
-        )
-    
-    def populate_field(self, field_name, parent_value):
-        """
-        REQUIRED: Populate choices for a dependent field based on parent value.
-        Child classes must implement this method.
-        
-        Args:
-            field_name: Name of the dependent field to populate
-            parent_value: Value of the parent field
-            
-        Returns:
-            list: List of tuples (value, label) for the dependent field
-            Example: [('maharashtra', 'Maharashtra'), ('karnataka', 'Karnataka')]
-        """
-        raise NotImplementedError(
-            "Child class must implement populate_field(field_name, parent_value) method"
-        )
     
     def _get_field_value(self, field_name):
         """
