@@ -1,5 +1,5 @@
 from rich import print
-from field_parser import FormSerializer
+from FormSerializer import FormSerializer
 from Model import ContactForm
 
 

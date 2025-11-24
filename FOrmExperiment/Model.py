@@ -225,6 +225,29 @@ class ContactForm(forms.Form):
             # Populate languages based on state
             self.populate_languages(value)
     
+    def _is_value_changed(self, field_name, new_value):
+        """
+        Check if the new value differs from current value.
+        Single responsibility: Compare new value with current field value.
+        
+        Args:
+            field_name: Name of the field to check
+            new_value: The new value to compare
+            
+        Returns:
+            bool: True if value changed, False if same
+        """
+        # Get current value (before updating)
+        current_value = self.get_field_value(field_name)
+        
+        # Handle None vs empty string comparisons
+        # Normalize None and empty string to None for comparison
+        normalized_current = None if (current_value is None or current_value == '') else current_value
+        normalized_new = None if (new_value is None or new_value == '') else new_value
+        
+        # Compare normalized values
+        return normalized_current != normalized_new
+    
     def update_field(self, field_name, value):
         """
         Public interface for updating fields incrementally.
@@ -234,14 +257,20 @@ class ContactForm(forms.Form):
             field_name: Name of the field to update
             value: Value to set for the field
         """
-        # Store the value
+        # Check if value actually changed
+        value_changed = self._is_value_changed(field_name, value)
+        
+        # Store the value (always update for consistency)
         self._update_incremental_data(field_name, value)
-        # Rebind form with updated data
+        # Rebind form with updated data (always rebind for consistency)
         self._rebind_form()
-        # Handle dependent field updates
-        self._handle_field_dependencies(field_name, value)
-        # Validate the updated field
-        self._validate_field(field_name)
+        
+        # Only handle dependent fields and validate if value actually changed
+        if value_changed:
+            # Handle dependent field updates
+            self._handle_field_dependencies(field_name, value)
+            # Validate the updated field
+            self._validate_field(field_name)
     
     def get_field_value(self, field_name):
         """
