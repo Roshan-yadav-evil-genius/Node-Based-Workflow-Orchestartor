@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from Nodes.Node.Form.Core import BaseForm
+
 
 class BaseNodeProperty(ABC):
     """
@@ -52,4 +54,14 @@ class BaseNodeProperty(ABC):
             str: An icon identifier or path for displaying the node.
         """
         pass
+    
+    @property
+    @abstractmethod
+    def form(self) -> BaseForm:
+        """
+        Get the associated form for this node.
 
+        Returns:
+            BaseForm: An instance of the form corresponding to this node.
+        """
+        pass
