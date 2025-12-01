@@ -17,6 +17,22 @@ from nodes import (
     QueueReader,
 )
 
+# Import all dummy node implementations
+from Node.playwright_freelance_job_monitor_producer import PlaywrightFreelanceJobMonitorProducer
+from Node.if_python_job_node import IfPythonJobNode
+from Node.if_score_threshold_node import IfScoreThresholdNode
+from Node.store_reader import StoreReader
+from Node.queue_reader_dummy import QueueReaderDummy
+from Node.query_db import QueryDB
+from Node.ai_ml_scoring_node import AIMLScoringNode
+from Node.llm_proposal_preparer import LLMProposalPreparer
+from Node.playwright_freelance_bidder import PlaywrightFreelanceBidder
+from Node.telegram_sender import TelegramSender
+from Node.db_status_updater import DBStatusUpdater
+from Node.store_node import StoreNode
+from Node.queue_node_dummy import QueueNodeDummy
+from Node.db_node import DBNode
+
 
 class NodeFactory:
     """
@@ -83,7 +99,58 @@ class NodeFactory:
         # Handle built-in node types
         node_type_lower = node_type.lower()
         
-        if node_type_lower == 'queue':
+        # Dummy node implementations
+        if node_type_lower == 'playwright-freelance-job-monitor-producer' or node_type_lower == 'playwright_freelance_job_monitor_producer':
+            return PlaywrightFreelanceJobMonitorProducer(node_config)
+        
+        elif node_type_lower == 'if-python-job' or node_type_lower == 'if_python_job':
+            threshold = node_config_dict.get('config', {}).get('threshold', 0.8)
+            return IfPythonJobNode(node_config)
+        
+        elif node_type_lower == 'if-score-threshold' or node_type_lower == 'if_score_threshold':
+            threshold = node_config_dict.get('config', {}).get('threshold', 0.8)
+            return IfScoreThresholdNode(node_config, threshold=threshold)
+        
+        elif node_type_lower == 'store-reader' or node_type_lower == 'store_reader':
+            return StoreReader(node_config)
+        
+        elif node_type_lower == 'queue-reader-dummy' or node_type_lower == 'queue_reader_dummy':
+            queue_name = node_config_dict.get('config', {}).get('queue_name', 'default')
+            return QueueReaderDummy(node_config, queue_name=queue_name)
+        
+        elif node_type_lower == 'query-db' or node_type_lower == 'query_db':
+            return QueryDB(node_config)
+        
+        elif node_type_lower == 'ai-ml-scoring' or node_type_lower == 'ai_ml_scoring':
+            return AIMLScoringNode(node_config)
+        
+        elif node_type_lower == 'llm-proposal-preparer' or node_type_lower == 'llm_proposal_preparer':
+            return LLMProposalPreparer(node_config)
+        
+        elif node_type_lower == 'playwright-freelance-bidder' or node_type_lower == 'playwright_freelance_bidder':
+            return PlaywrightFreelanceBidder(node_config)
+        
+        elif node_type_lower == 'telegram-sender' or node_type_lower == 'telegram_sender':
+            group_id = node_config_dict.get('config', {}).get('group_id', 'default_group')
+            return TelegramSender(node_config, group_id=group_id)
+        
+        elif node_type_lower == 'db-status-updater' or node_type_lower == 'db_status_updater':
+            return DBStatusUpdater(node_config)
+        
+        elif node_type_lower == 'store-node' or node_type_lower == 'store_node':
+            store_name = node_config_dict.get('config', {}).get('store_name', 'default_store')
+            return StoreNode(node_config, store_name=store_name)
+        
+        elif node_type_lower == 'queue-node-dummy' or node_type_lower == 'queue_node_dummy':
+            queue_name = node_config_dict.get('config', {}).get('queue_name', 'default_queue')
+            return QueueNodeDummy(node_config, queue_name=queue_name)
+        
+        elif node_type_lower == 'db-node' or node_type_lower == 'db_node':
+            table_name = node_config_dict.get('config', {}).get('table_name', 'jobs')
+            return DBNode(node_config, table_name=table_name)
+        
+        # Built-in node types
+        elif node_type_lower == 'queue':
             queue_name = node_config_dict.get('queue_name')
             if not queue_name:
                 raise ValueError(f"QueueNode '{node_id}' requires 'queue_name' in config")

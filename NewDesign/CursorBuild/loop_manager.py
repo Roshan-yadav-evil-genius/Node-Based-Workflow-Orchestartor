@@ -76,16 +76,11 @@ class LoopManager:
             self._workflow_graph
         )
         
-        # Get node chain for this loop
-        node_chain = self._workflow_graph.get_node_chain(self._producer_id)
-        
-        if not node_chain:
-            raise ValueError(f"No node chain found for producer '{self._producer_id}'")
-        
         # Main loop
         while self._running and not self._stop_event.is_set():
             try:
-                await self._execute_iteration(node_chain)
+                # Use dynamic routing (None means use dynamic traversal)
+                await self._execute_iteration(None)
             except asyncio.CancelledError:
                 # Loop was cancelled
                 break
@@ -99,17 +94,46 @@ class LoopManager:
         """
         Execute one iteration of the loop.
         
+        Supports both static chains (for simple workflows) and dynamic routing
+        (for conditional nodes). If node_chain is provided, uses it. Otherwise,
+        dynamically traverses the graph handling conditional routing.
+        
         Args:
-            node_chain: Ordered list of node IDs in the execution chain
+            node_chain: Optional ordered list of node IDs (if None, uses dynamic routing)
         """
         node_data = NodeData()  # Start with empty data
+        current_node_id = self._producer_id
         
-        for node_id in node_chain:
+        # Track visited nodes to prevent infinite loops
+        visited = set()
+        
+        while current_node_id:
+            # Prevent infinite loops
+            if current_node_id in visited:
+                break
+            visited.add(current_node_id)
+            
             try:
-                node_data = await self._execute_node(node_id, node_data)
+                # Execute current node
+                node_data = await self._execute_node(current_node_id, node_data)
+                
+                # Check if current node is non-blocking (iteration end)
+                current_node = self._workflow_graph.get_node(current_node_id)
+                if current_node and hasattr(current_node, 'node_config'):
+                    node_type = current_node.node_config.node_type.lower()
+                    if node_type in ['non-blocking', 'nonblocking', 'queue', 'queue-node-dummy', 
+                                     'store-node', 'db-node', 'telegram-sender', 'db-status-updater', 
+                                     'playwright-freelance-bidder', 'llm-proposal-preparer']:
+                        # Iteration ends at non-blocking node
+                        break
+                
+                # Get next node (handles conditional routing)
+                next_node_id = self._workflow_graph.get_next_node(current_node_id, node_data)
+                current_node_id = next_node_id
+                
             except Exception as e:
                 # Handle node error: send to DLQ and return to producer
-                await self._handle_node_error(node_id, node_data, e)
+                await self._handle_node_error(current_node_id, node_data, e)
                 # Return to producer for next iteration
                 return
     

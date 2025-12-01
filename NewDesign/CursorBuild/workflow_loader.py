@@ -6,11 +6,14 @@ and constructing an executable workflow graph, following the Single Responsibili
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from domain import NodeType
 from node_factory import NodeFactory
 from nodes import BaseNode
+
+if TYPE_CHECKING:
+    from domain import NodeData
 
 
 @dataclass
@@ -33,21 +36,29 @@ class WorkflowGraph:
     nodes: Dict[str, BaseNode] = field(default_factory=dict)
     edges: List[Edge] = field(default_factory=list)
     
-    def get_downstream_nodes(self, node_id: str) -> List[str]:
+    def get_downstream_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
         """
         Get immediate downstream nodes for a given node.
         
         Args:
             node_id: Source node identifier
+            edge_label: Optional edge label to filter by (e.g., "Yes", "No")
             
         Returns:
             List[str]: List of target node IDs
         """
-        return [
-            edge.target
-            for edge in self.edges
-            if edge.source == node_id
-        ]
+        if edge_label is None:
+            return [
+                edge.target
+                for edge in self.edges
+                if edge.source == node_id
+            ]
+        else:
+            return [
+                edge.target
+                for edge in self.edges
+                if edge.source == node_id and edge.source_handle == edge_label
+            ]
     
     def get_upstream_nodes(self, node_id: str) -> List[str]:
         """
@@ -91,15 +102,17 @@ class WorkflowGraph:
         
         return producers
     
-    def get_node_chain(self, producer_id: str) -> List[str]:
+    def get_node_chain(self, producer_id: str, node_data: Optional["NodeData"] = None) -> List[str]:
         """
         Get ordered chain of nodes from producer to non-blocking node.
         
         Traverses the graph from the producer node following edges until
         a non-blocking node is reached (which marks the end of the iteration).
+        Handles conditional nodes by routing based on edge labels and node_data metadata.
         
         Args:
             producer_id: Starting producer node ID
+            node_data: Optional NodeData to use for conditional routing
             
         Returns:
             List[str]: Ordered list of node IDs in the chain
@@ -111,21 +124,39 @@ class WorkflowGraph:
         current_id = producer_id
         
         while True:
-            downstream = self.get_downstream_nodes(current_id)
+            current_node = self.nodes.get(current_id)
+            
+            # Check if current node is a conditional node
+            is_conditional = False
+            condition_label = None
+            if current_node and hasattr(current_node, 'node_config'):
+                node_type = current_node.node_config.node_type.lower()
+                if 'if-' in node_type or 'conditional' in node_type:
+                    is_conditional = True
+                    # Get condition label from node_data metadata if available
+                    if node_data and hasattr(node_data, 'metadata'):
+                        condition_label = node_data.metadata.get('condition_label')
+            
+            # Get downstream nodes
+            if is_conditional and condition_label:
+                # Route based on condition label
+                downstream = self.get_downstream_nodes(current_id, edge_label=condition_label)
+            else:
+                # Get all downstream nodes (take first if multiple)
+                downstream = self.get_downstream_nodes(current_id)
             
             if not downstream:
                 # No more nodes in chain
                 break
             
-            # For simplicity, take the first downstream node
-            # In a more complex graph, we might need to handle branching
+            # Take the first downstream node
             next_id = downstream[0]
             
             # Check if next node is non-blocking (iteration end)
             next_node = self.nodes.get(next_id)
             if next_node and hasattr(next_node, 'node_config'):
                 node_type = next_node.node_config.node_type.lower()
-                if node_type in ['non-blocking', 'nonblocking', 'queue']:
+                if node_type in ['non-blocking', 'nonblocking', 'queue', 'queue-node-dummy', 'store-node', 'db-node', 'telegram-sender', 'db-status-updater', 'playwright-freelance-bidder']:
                     chain.append(next_id)
                     break
             
@@ -133,6 +164,45 @@ class WorkflowGraph:
             current_id = next_id
         
         return chain
+    
+    def get_next_node(self, node_id: str, node_data: Optional["NodeData"] = None) -> Optional[str]:
+        """
+        Get the next node in the workflow chain based on current node and optional data.
+        
+        Handles conditional routing by checking node_data metadata for condition labels.
+        
+        Args:
+            node_id: Current node ID
+            node_data: Optional NodeData containing condition results
+            
+        Returns:
+            Optional[str]: Next node ID, or None if no downstream nodes
+        """
+        if node_id not in self.nodes:
+            return None
+        
+        current_node = self.nodes.get(node_id)
+        
+        # Check if current node is a conditional node
+        is_conditional = False
+        condition_label = None
+        if current_node and hasattr(current_node, 'node_config'):
+            node_type = current_node.node_config.node_type.lower()
+            if 'if-' in node_type or 'conditional' in node_type:
+                is_conditional = True
+                # Get condition label from node_data metadata if available
+                if node_data and hasattr(node_data, 'metadata'):
+                    condition_label = node_data.metadata.get('condition_label')
+        
+        # Get downstream nodes
+        if is_conditional and condition_label:
+            # Route based on condition label
+            downstream = self.get_downstream_nodes(node_id, edge_label=condition_label)
+        else:
+            # Get all downstream nodes (take first if multiple)
+            downstream = self.get_downstream_nodes(node_id)
+        
+        return downstream[0] if downstream else None
     
     def get_node(self, node_id: str) -> Optional[BaseNode]:
         """Get a node by ID."""
