@@ -1,0 +1,18 @@
+# Workflow Orchestrator Dependencies
+# Python 3.12+
+
+# Redis client with async support
+redis[hiredis]>=5.0.0
+
+# Note: The following are part of Python standard library (Python 3.12+):
+# - asyncio
+# - concurrent.futures
+# - dataclasses
+# - typing
+# - json
+# - logging
+# - pickle
+# - traceback
+# - datetime
+# - collections
+# - time
