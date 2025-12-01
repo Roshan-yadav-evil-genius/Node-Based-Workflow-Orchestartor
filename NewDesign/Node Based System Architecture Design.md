@@ -4,11 +4,25 @@
 
 ## 1. Overview
 
-The Workflow Orchestrator is the central coordination system responsible for running workflows composed of interconnected nodes arranged into one or more **loops**. Each loop is an isolated execution track controlled by a single Producer. The entire codebase uses **async/await** throughout — LoopManager, nodes, and QueueManager all operate asynchronously. Loops run inside asyncio event loops, thread pools, or process pools.
+The Workflow Orchestrator is the central coordination system responsible for running workflows. It can be executed in two distinct modes: **Production Mode** for running complete, autonomous workflows, and **Development Mode** for iterative, developer-driven execution of single nodes.
 
-The orchestrator ensures that nodes inside one loop and nodes across different loops communicate predictably while preserving each node's execution semantics.
+The orchestrator ensures that nodes inside one loop and nodes across different loops communicate predictably while preserving each node's execution semantics, with different mechanisms applying to each mode.
 
-### 1.1 Key Principles
+### 1.1 Operating Modes
+
+The Orchestrator has two modes that fundamentally change its behavior:
+
+#### Production Mode
+*   **Goal:** High-performance, autonomous execution of complete workflows.
+*   **Mechanism:** The Orchestrator launches and manages `LoopManagers`. Each `LoopManager` is responsible for running an entire loop of nodes continuously.
+*   **Execution:** The `LoopManager` determines the execution pool for the *entire loop* by selecting the highest-priority pool requested by any node within that loop.
+
+#### Development Mode
+*   **Goal:** Flexible, iterative testing and debugging of individual nodes.
+*   **Mechanism:** The `LoopManager` concept is not used. The Orchestrator directly handles execution requests from the developer.
+*   **Execution:** The Orchestrator executes nodes one at a time, in the *specific execution pool* requested by that individual node. It uses Redis as a cache to pass outputs from one step to the next.
+
+### 1.2 Key Principles
 
 * **Isolation:** Loops are fully isolated execution tracks running in separate pools (asyncio, threads, or processes).
 * **Adaptive Execution:** The execution pool for a loop is determined dynamically based on the requirements of its constituent nodes, ensuring optimal resource usage.
@@ -23,15 +37,15 @@ The orchestrator ensures that nodes inside one loop and nodes across different l
 
 ### 2.1 Node (BaseNode)
 
-A **Node** is the smallest executable unit inside a workflow loop. Each node inherits from `BaseNode`.
+A **Node** is the smallest executable unit in a workflow. Each node inherits from `BaseNode`.
 
 * Each node receives two objects:
   * `NodeConfig` — static initialization/config settings
   * `NodeData` — runtime payload for the iteration
 * Each node also defines a preferred **`ExecutionPool`** (e.g., `ASYNC`, `THREAD`, `PROCESS`) via an enum property, indicating the ideal environment for its execution.
-* All nodes implement an **async `execute()` method**: the LoopManager **awaits** `await node.execute(...)` before moving on.
+* All nodes implement an **async `execute()` method**: the executing agent (LoopManager or Orchestrator) **awaits** `await node.execute(...)` before moving on.
 * Nodes use `async/await` throughout their implementation for I/O operations, queue access, and any asynchronous work.
-* Nodes never manage their own concurrency; they simply "run" when invoked by the LoopManager via async execution.
+* Nodes never manage their own concurrency; they simply "run" when invoked (by the LoopManager in Production Mode, or the Orchestrator in Development Mode) via async execution.
 
 ### 2.2 Node Types
 
@@ -98,35 +112,85 @@ A **Loop** is a continuous execution track controlled by a single **ProducerNode
 
 ## 3. Execution Model & Flow
 
-The execution flow is **fully asynchronous** within each loop. All nodes must implement async `execute()` methods and use `async/await` throughout.
 
-### 3.1 The Execution Cycle
 
-The LoopManager executes the flow sequentially (awaiting each node) until it hits the Non-Blocking Node, at which point the iteration is complete.
+The system's execution model differs significantly between its two operating modes.
 
-1. **Start:** LoopManager awaits the **Producer Node** (`await producer.execute(...)`).
-2. **Middle:** LoopManager sequentially awaits all **Blocking Nodes**. Each node's `execute()` must complete before continuing.
-3. **End:** LoopManager awaits the **Non-Blocking Node** (the async execution chain ends here). That node completes and the iteration ends.
-4. **Restart:** Immediately after the Non-Blocking Node completes, the LoopManager **jumps back to the Producer Node** to initiate the next iteration.
 
-### 3.2 Execution Rules Summary
+
+### 3.1 Production Mode: The LoopManager Cycle
+
+
+
+In Production Mode, the execution flow is **fully asynchronous** within each loop. The LoopManager executes the flow sequentially (awaiting each node) until it hits the Non-Blocking Node, at which point the iteration is complete.
+
+
+
+1.  **Start:** LoopManager awaits the **Producer Node** (`await producer.execute(...)`).
+
+2.  **Middle:** LoopManager sequentially awaits all **Blocking Nodes**. Each node's `execute()` must complete before continuing.
+
+3.  **End:** LoopManager awaits the **Non-Blocking Node** (the async execution chain ends here). That node completes and the iteration ends.
+
+4.  **Restart:** Immediately after the Non-Blocking Node completes, the LoopManager **jumps back to the Producer Node** to initiate the next iteration.
+
+
+
+### 3.2 Execution Rules Summary (Production Mode)
+
+
 
 | Node Type | Execution Model | LoopManager Behavior | Use Case |
+
 |-----------|-----------------|---------------------|----------|
+
 | **Producer** | Async (`async execute()`) | Awaited first, re-invoked after iteration completes | Starting loops, generating jobs, orchestrating flow |
+
 | **Blocking** | Async (`async execute()`) | Awaits node and all downstream Blocking children to complete | Critical sequential operations, sequential async processing |
+
 | **Non-Blocking** | Async (`async execute()`) | Awaits node execution, then iteration ends | Async branching, offloading long tasks, creating async boundaries |
+
+
 
 ### 3.3 Async Execution Model
 
+
+
 * **LoopManager / Orchestrator:** fully async control flow using `async/await`; runs in asyncio event loops, thread pools, or process pools.
+
 * **Nodes:** all nodes implement `async execute()` methods. Node authors must:
+
   * Implement `async def execute(node_data: NodeData) -> NodeData` for all nodes.
+
   * Use `async/await` for all I/O operations, queue access, and asynchronous work.
+
   * Ensure `execute()` completes (via await) only when the node has reached the state that should allow the orchestrator to continue the chain.
+
 * **Reason:** outputs of a node directly become inputs of downstream nodes; async completion guarantees consistent handoff and deterministic loop timing while enabling optimal I/O performance and scalability.
 
+
+
 *Loops run inside asyncio event loops (primary), ThreadPool, or ProcessPool execution contexts. The LoopManager core uses async/await throughout for orchestration control.*
+
+
+
+### 3.4 Development Mode: The Orchestrator Cycle
+
+
+
+In Development Mode, there is no `LoopManager`. The Orchestrator executes single nodes on-demand.
+
+
+
+1.  **Request:** A developer requests the execution of a single node (e.g., Node B).
+
+2.  **Dependency Check:** The Orchestrator inspects the workflow graph to find the upstream node (e.g., Node A). It checks a Redis cache for the last known output of Node A.
+
+3.  **Input Resolution:** If a cached output for Node A is found, it is used as the input for Node B. If not, the execution may fail or await the execution of Node A.
+
+4.  **Execution:** The Orchestrator runs `await node.execute(...)` for Node B in the specific `ExecutionPool` defined on Node B.
+
+5.  **Store Output:** The output `NodeData` from Node B is saved to the Redis cache, overwriting any previous result for Node B and making it available for downstream nodes.
 
 ---
 
@@ -165,50 +229,30 @@ This enables plug-and-play pipelines and decouples loops without requiring them 
 
 ## 5. Workflow Orchestrator Responsibilities
 
-### 5.1 Lifecycle Management
+The Workflow Orchestrator is the master controller, but its responsibilities shift depending on the operating mode.
 
-* Load workflows (React Flow JSON) and initialize `NodeConfig` for each node.
-* Build loops from node graphs (using edges to construct execution chains).
-* Start, stop, pause, and resume loops (all operations are async).
-* Manages the execution context, delegating the dynamic selection of a loop's execution pool (Asyncio, ThreadPool, or ProcessPool) to the LoopManager.
+### 5.1 Core Responsibilities (Both Modes)
 
-### 5.2 Loop Execution
+*   **Workflow Loading:** Loads workflow definitions (e.g., React Flow JSON) and initializes `NodeConfig` for each node.
+*   **Graph Management:** Builds the executable graph of nodes from the workflow definition.
+*   **State & Observability:** Maintains and exposes system-wide state, health, logs, and metrics.
+*   **Communication:** Manages the `QueueManager` for cross-loop communication and the Redis cache for `Development Mode`.
 
-The orchestrator manages:
+### 5.2 Production Mode Responsibilities
 
-* How ProducerNodes trigger iterations.
-* How Blocking and NonBlocking nodes chain execution.
-* How errors are propagated or isolated per node/loop.
+*   **Lifecycle Management:** Manages the lifecycle of `LoopManagers`, starting, stopping, and pausing entire loops.
+*   **Execution Delegation:** Delegates the entire execution of a loop to the corresponding `LoopManager`.
 
-### 5.3 Communication Between Loops
+### 5.3 Development Mode Responsibilities
 
-The orchestrator provides an internal messaging interface (via QueueManager) enabling:
-
-* Data routed to QueueNode in Loop A to be consumed in Loop B.
-* Message passing without tightly coupling loops.
-
-This avoids loops needing to know each other's runtime details.
-
-### 5.4 State Handling
-
-The orchestrator maintains:
-
-* Loop state (running, stopped, error).
-* Node state (healthy, failing).
-
-It may optionally support persistence for crash recovery.
-
-### 5.5 Health, Logging, and Observability
-
-The orchestrator should expose:
-
-* Logs per loop and per node.
-* Health indicators for nodes.
-* Metrics: iterations/sec, errors, queue depth, DLQ size, etc.
+*   **Direct Execution:** Directly handles requests from developers to execute single nodes. There is no `LoopManager`.
+*   **Dependency & Input Resolution:** Before executing a node, it checks the workflow graph for upstream dependencies and queries the Redis cache for their outputs to use as input.
+*   **Pool Management:** Executes the requested node in the specific `ExecutionPool` that the node has defined for itself.
+*   **State Caching:** Stores the output of the executed node back into the Redis cache.
 
 ---
 
-## 6. LoopManager Responsibilities
+## 6. LoopManager Responsibilities (Production Mode Only)
 
 LoopManager handles one loop at a time:
 
@@ -318,18 +362,20 @@ The following items are left to implementation and are not required to block the
 
 * **BaseNode:** The base class from which all nodes inherit.
 * **BlockingNode:** Must finish (and downstream blocking chain must finish) before continuing.
+* **Development Mode:** An operating mode for the Orchestrator focused on iterative, single-node execution for testing and debugging. It does not use a `LoopManager`.
 * **DLQ:** Dead-Letter Queue storing failed NodeData + error context.
-* **ExecutionPool:** An enum (`ASYNC`, `THREAD`, `PROCESS`) defined on each node to declare its preferred execution environment. Used by the LoopManager to dynamically select the runtime for a loop.
-* **Loop:** A continuous execution track controlled by a single ProducerNode, running in an isolated pool (Asyncio Event Loop, ThreadPool, or ProcessPool).
-* **LoopManager:** The per-loop executor that runs nodes in sequence and enforces async iteration semantics using await. It also dynamically determines the correct execution pool (`ExecutionPool`) for each loop cycle.
+* **ExecutionPool:** An enum (`ASYNC`, `THREAD`, `PROCESS`) on a node declaring its ideal execution environment. Used by the `LoopManager` in Production Mode to select a pool for the whole loop, and by the `Orchestrator` in Development Mode to run a single node.
+* **Loop:** A continuous execution track controlled by a single ProducerNode, running in an isolated pool. This concept primarily applies to **Production Mode**.
+* **LoopManager:** The per-loop executor for **Production Mode**. It runs nodes in sequence and dynamically determines the execution pool for each loop cycle.
 * **NodeConfig:** Static initialization/config data passed to nodes during initialization.
 * **NodeData:** Runtime payload passed to nodes during execution.
 * **Non-Blocking Node:** Marks iteration end in the execution model; executed asynchronously using await.
 * **ProducerNode:** Starts an iteration (QueueReader is treated as a Producer).
+* **Production Mode:** The main operating mode for the Orchestrator, focused on autonomous, high-performance execution of entire workflows via `LoopManagers`.
 * **QueueManager:** Redis-backed queue abstraction for cross-loop communication.
 * **QueueNode:** A NonBlockingNode that writes data to a Redis queue.
 * **QueueReader:** A ProducerNode that reads data from a Redis queue to start a loop iteration.
-* **Workflow Orchestrator:** The central coordination system that manages loops, nodes, and cross-loop communication.
+* **Workflow Orchestrator:** The central coordination system that can operate in either **Production Mode** or **Development Mode** to manage and execute workflows.
 
 ---
 
