@@ -1,5 +1,7 @@
 # Workflow Orchestrator Requirements
 
+<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="https://embed.figma.com/board/ipiIPvsqG17Is2kzJJkv08/Node-Architecture?node-id=0-1&embed-host=share" allowfullscreen></iframe>
+
 ## 1. Overview
 
 The Workflow Orchestrator is the central coordination system responsible for running workflows composed of interconnected nodes arranged into one or more **loops**. Each loop is an isolated execution track controlled by a single Producer. The entire codebase uses **async/await** throughout — LoopManager, nodes, and QueueManager all operate asynchronously. Loops run inside asyncio event loops, thread pools, or process pools.
@@ -52,21 +54,21 @@ The orchestrator supports three fundamental node types:
 
 #### Non-Blocking Node
 
-* Can semantically mark loop-end in the execution model (when present).
+* Semantically marks loop-end in the execution model.
 * Performs a computation or transformation but does not force the Producer to wait for downstream operations.
 * From the LoopManager's perspective it awaits the node's execution, then the iteration ends and control returns to Producer.
 * Nodes can offload long side-effects asynchronously — the node must ensure its `execute()` completes in a way consistent with loop semantics.
 * Useful for creating **async boundaries** within the workflow.
 
-> **Important:** Although we keep the names (Blocking / Non-Blocking) for intent and developer guidance, the final rule is that **the LoopManager awaits each node's `execute()`**. A loop iteration ends when either: (1) a Non-Blocking node is encountered, OR (2) there are no more downstream nodes to execute (end of chain reached). Non-Blocking nodes are not required to mark loop end.
+> **Important:** Although we keep the names (Blocking / Non-Blocking) for intent and developer guidance, the final rule is that **the LoopManager awaits each node's `execute()`**; Non-Blocking nodes are treated as the iteration end marker.
 
-### 2.3 Examples of Producer and NonBlockingNode 
+### 2.3 Exampel of Producer and NonBlockingNode 
 
 **QueueNode**
 
 * Inherits from **NonBlockingNode**.
 * Writes/publishes data to a Redis-backed queue via `await QueueManager.push()`.
-* Can act as a **loop end marker** in the execution model (when used as the last node in a chain).
+* Acts as the **loop end marker** in the execution model.
 * Executes asynchronously using `async/await`.
 * After its execution completes, the LoopManager immediately returns to the Producer to start the next iteration.
 * Pushes data to a queue, enabling data to be consumed in a different loop.
@@ -83,17 +85,13 @@ The orchestrator supports three fundamental node types:
 
 A **Loop** is a continuous execution track controlled by a single **ProducerNode**. It contains a chain of Blocking and NonBlocking nodes.
 
-* **Multiple Loops in a Workflow:** A single workflow can contain multiple Producer nodes, each creating its own independent loop. The orchestrator manages all loops concurrently.
-* **Loop Boundaries:** A loop iteration ends when either:
-  * A Non-Blocking node is encountered, OR
-  * There are no more downstream nodes to execute (end of chain reached)
 * Each loop runs in its own execution pool:
   * **Asyncio Event Loop** — for async/await-based execution (primary mode)
   * **ThreadPool** — for thread-based execution (with async support)
   * **ProcessPool** — for process-based execution (with async support)
 * **Note:** Asyncio is the **primary and recommended** pool type for the LoopManager's core execution flow. All nodes use async/await throughout.
 * Loops behave like async pipelines with timing rules defined by the node types.
-* Loops are fully isolated execution tracks that can run in parallel.
+* Loops are fully isolated execution tracks.
 
 ---
 
@@ -103,18 +101,12 @@ The execution flow is **fully asynchronous** within each loop. All nodes must im
 
 ### 3.1 The Execution Cycle
 
-The LoopManager executes the flow sequentially (awaiting each node) until either:
-- It hits a Non-Blocking Node, OR
-- There are no more downstream nodes to execute
-
-At this point, the iteration is complete.
+The LoopManager executes the flow sequentially (awaiting each node) until it hits the Non-Blocking Node, at which point the iteration is complete.
 
 1. **Start:** LoopManager awaits the **Producer Node** (`await producer.execute(...)`).
 2. **Middle:** LoopManager sequentially awaits all **Blocking Nodes**. Each node's `execute()` must complete before continuing.
-3. **End:** The iteration ends when either:
-   - LoopManager awaits a **Non-Blocking Node** (the async execution chain ends here), OR
-   - There are no more downstream nodes to execute (end of chain reached)
-4. **Restart:** Immediately after the iteration ends, the LoopManager **jumps back to the Producer Node** to initiate the next iteration.
+3. **End:** LoopManager awaits the **Non-Blocking Node** (the async execution chain ends here). That node completes and the iteration ends.
+4. **Restart:** Immediately after the Non-Blocking Node completes, the LoopManager **jumps back to the Producer Node** to initiate the next iteration.
 
 ### 3.2 Execution Rules Summary
 
@@ -137,48 +129,17 @@ At this point, the iteration is complete.
 
 ---
 
-## 4. Multiple Loops in a Single Workflow
-
-A single workflow can contain multiple Producer nodes, each creating its own independent loop. The orchestrator must identify, create, and manage all loops concurrently.
-
-### 4.1 Loop Identification
-
-* **Each ProducerNode starts a new loop.** When the orchestrator loads a workflow, it identifies all Producer nodes in the graph.
-* **Loop boundaries are determined by:**
-  * Starting point: A ProducerNode (or QueueReader acting as Producer)
-  * Continuation: Blocking nodes that form the sequential chain
-  * End point: Either a Non-Blocking node OR the end of the chain (no more downstream nodes)
-* **Multiple Non-Blocking nodes** can exist in a workflow, each marking the end of its respective loop iteration.
-
-### 4.2 Concurrent Loop Management
-
-* The orchestrator creates a **separate LoopManager for each Producer node**.
-* All loops run concurrently and independently in their own execution pools.
-* Loops are fully isolated — a failure in one loop does not affect others.
-* The orchestrator coordinates all loops, managing their lifecycle, state, and cross-loop communication.
-
-### 4.3 Example Workflow Structure
-
-A workflow might contain:
-* **Loop 1:** ProducerNode → BlockingNode → NonBlockingNode (QueueNode)
-* **Loop 2:** QueueReader (Producer) → BlockingNode → BlockingNode (ends at chain end)
-* **Loop 3:** ProducerNode → BlockingNode → BlockingNode (ends at chain end)
-
-All three loops run concurrently, with Loop 1 feeding data to Loop 2 via the queue.
-
----
-
-## 5. Cross-Loop Communication — QueueManager (Redis-backed)
+## 4. Cross-Loop Communication — QueueManager (Redis-backed)
 
 Cross-loop data flow is achieved through an abstracted `QueueManager` API, which manages Redis-backed queues stored in the Orchestrator.
 
-### 5.1 Redis Queue Dictionary
+### 4.1 Redis Queue Dictionary
 
 * The **Workflow Orchestrator** maintains a dictionary of named queues, where each queue instance is inherently **multi-process safe** (backed by Redis).
 * This approach guarantees predictable communication regardless of the sender/receiver pool types (Thread, Process).
 * Queues are not owned by the LoopManager; they are managed at the orchestrator level.
 
-### 5.2 QueueManager API Contract
+### 4.2 QueueManager API Contract
 
 Nodes access the queue system only through the high-level `QueueManager` API, which abstracts away Redis details (serialization, connection management, BPOP/BRPOP logic). All QueueManager methods are async.
 
@@ -189,7 +150,7 @@ Nodes access the queue system only through the high-level `QueueManager` API, wh
 
 The **QueueReader Node** in Loop B will use the `pop` method to await until data is available in the named queue.
 
-### 5.3 Cross-Loop Data Flow
+### 4.3 Cross-Loop Data Flow
 
 When a node pushes data to a queue:
 
@@ -201,31 +162,24 @@ This enables plug-and-play pipelines and decouples loops without requiring them 
 
 ---
 
-## 6. Workflow Orchestrator Responsibilities
+## 5. Workflow Orchestrator Responsibilities
 
-### 6.1 Lifecycle Management
+### 5.1 Lifecycle Management
 
 * Load workflows (React Flow JSON) and initialize `NodeConfig` for each node.
-* **Identify all Producer nodes** in the workflow graph — each Producer node creates a new independent loop.
-* **Build loops from node graphs** (using edges to construct execution chains):
-  * For each Producer node, trace downstream nodes following edges
-  * A loop continues through Blocking nodes
-  * A loop iteration ends when a Non-Blocking node is encountered OR when there are no more downstream nodes
-* **Create a LoopManager for each Producer node** — the orchestrator manages all loops concurrently.
-* Start, stop, pause, and resume all loops (all operations are async).
+* Build loops from node graphs (using edges to construct execution chains).
+* Start, stop, pause, and resume loops (all operations are async).
 * Assign pool types (Asyncio Event Loop, ThreadPool, or ProcessPool) per loop.
-* **Coordinate multiple loops** running in parallel, ensuring proper isolation and cross-loop communication.
 
-### 6.2 Loop Execution
+### 5.2 Loop Execution
 
 The orchestrator manages:
 
-* How ProducerNodes trigger iterations across all loops.
-* How Blocking and NonBlocking nodes chain execution within each loop.
+* How ProducerNodes trigger iterations.
+* How Blocking and NonBlocking nodes chain execution.
 * How errors are propagated or isolated per node/loop.
-* **Concurrent execution** of multiple loops, each running independently in their own execution pool.
 
-### 6.3 Communication Between Loops
+### 5.3 Communication Between Loops
 
 The orchestrator provides an internal messaging interface (via QueueManager) enabling:
 
@@ -234,7 +188,7 @@ The orchestrator provides an internal messaging interface (via QueueManager) ena
 
 This avoids loops needing to know each other's runtime details.
 
-### 6.4 State Handling
+### 5.4 State Handling
 
 The orchestrator maintains:
 
@@ -243,7 +197,7 @@ The orchestrator maintains:
 
 It may optionally support persistence for crash recovery.
 
-### 6.5 Health, Logging, and Observability
+### 5.5 Health, Logging, and Observability
 
 The orchestrator should expose:
 
@@ -253,7 +207,7 @@ The orchestrator should expose:
 
 ---
 
-## 7. LoopManager Responsibilities
+## 6. LoopManager Responsibilities
 
 LoopManager handles one loop at a time:
 
@@ -273,7 +227,7 @@ All cross-loop data flows go through orchestrator-level messaging.
 
 ---
 
-## 8. Workflow Input Contract
+## 7. Workflow Input Contract
 
 * Input format: **React Flow JSON** with:
   * **Nodes**: List of node objects including `id`, `type` (e.g., 'producer', 'blocking', 'non-blocking'), and `data` (which maps to the `NodeConfig`).
@@ -282,16 +236,16 @@ All cross-loop data flows go through orchestrator-level messaging.
 
 ---
 
-## 9. Error Handling (Immediate Failure Policy)
+## 8. Error Handling (Immediate Failure Policy)
 
 The system enforces an **Immediate Failure Policy** with **zero retries** to prioritize overall system throughput and stability.
 
-### 9.1 Zero Retries
+### 8.1 Zero Retries
 
 * **Zero automatic retries.** There will be **NO automatic retries** for any failing node.
 * No automatic retry attempts by the orchestrator for failing nodes.
 
-### 9.2 Action on Error
+### 8.2 Action on Error
 
 As soon as an unhandled exception occurs in **any node** (Producer, Blocking, or Non-Blocking):
 
@@ -299,21 +253,21 @@ As soon as an unhandled exception occurs in **any node** (Producer, Blocking, or
 * Send failed payload + exception details to a **Dead-Letter Queue (DLQ)** (mandatory). This is a mandatory terminal action for the failed payload to prevent data loss and allow for external investigation.
 * The LoopManager must **immediately send control back to the Producer Node**. This terminates the failed iteration and restarts the loop process with the next unit of work.
 
-### 9.3 Failure Isolation
+### 8.3 Failure Isolation
 
 * All node-level exceptions must be captured and reported by the LoopManager.
 * Failure isolation is mandatory: The Orchestrator must support policies to prevent a single node or loop failure from crashing the entire system.
 * Loops can continue or be paused based on policy, but the orchestrator may isolate failures to avoid system-wide crash.
 
-### 9.4 Rationale
+### 8.4 Rationale
 
 Fail-fast design to preserve throughput and isolate recurring bad payloads into the DLQ for offline inspection.
 
 ---
 
-## 10. Developer Guidance & Expectations
+## 9. Developer Guidance & Expectations
 
-### 10.1 Node Authors
+### 9.1 Node Authors
 
 Developers implementing nodes should:
 
@@ -324,7 +278,7 @@ Developers implementing nodes should:
 * Understand that nodes follow strict async timing semantics.
 * Never manage their own concurrency; nodes simply "run" when invoked via async execution.
 
-### 10.2 System Implementers
+### 9.2 System Implementers
 
 Developers implementing the orchestrator should:
 
@@ -335,7 +289,7 @@ Developers implementing the orchestrator should:
 * Understand that queue nodes enable multi-loop coordination.
 * Understand that the orchestrator controls lifecycle, messaging, and concurrency.
 
-### 10.3 Key Developer Expectations
+### 9.3 Key Developer Expectations
 
 Developers should understand:
 
@@ -348,7 +302,7 @@ Developers should understand:
 
 ---
 
-## 11. Open Implementation Decisions
+## 10. Open Implementation Decisions
 
 The following items are left to implementation and are not required to block the specification:
 
@@ -359,7 +313,7 @@ The following items are left to implementation and are not required to block the
 
 ---
 
-## 12. Glossary
+## 11. Glossary
 
 * **BaseNode:** The base class from which all nodes inherit.
 * **BlockingNode:** Must finish (and downstream blocking chain must finish) before continuing.
@@ -377,41 +331,41 @@ The following items are left to implementation and are not required to block the
 
 ---
 
-## 13. Change Log — Conflict Resolution
+## 12. Change Log — Conflict Resolution
 
 This section documents how conflicts between different versions were resolved, with priority given to higher version numbers (v4 > v3 > v2 > v1 > v0).
 
-### 13.1 Execution Semantics & Node Blocking
+### 12.1 Execution Semantics & Node Blocking
 
 * **v0-v1:** Non-blocking nodes return immediately to Producer.
 * **v3-v4:** ALL nodes block from LoopManager perspective; Non-Blocking marks iteration end.
 * **Resolution:** v3/v4 chosen as authoritative — LoopManager waits for all nodes. Non-Blocking nodes are treated as iteration end markers.
 
-### 13.2 Pool Types
+### 12.2 Pool Types
 
 * **v1:** ThreadPool, Asyncio event loop, ProcessPool.
 * **v3-v4:** Only ThreadPool or ProcessPool (no asyncio for LoopManager).
 * **Updated Resolution (2024):** Asyncio Event Loop is now the **primary and recommended** pool type. The entire codebase uses async/await throughout. ThreadPool and ProcessPool are also supported with async capabilities.
 
-### 13.3 Error Handling
+### 12.3 Error Handling
 
 * **v1-v2:** General error handling with optional retries.
 * **v3-v4:** Immediate Failure Policy with zero retries + mandatory DLQ.
 * **Resolution:** v3/v4 Immediate Failure Policy adopted — zero retries + mandatory DLQ.
 
-### 13.4 QueueReader/QueueNode Classification
+### 12.4 QueueReader/QueueNode Classification
 
 * **v0-v1:** Not explicitly defined.
 * **v2-v4:** QueueReader = ProducerNode, QueueNode = NonBlockingNode.
 * **Resolution:** v2/v3/v4 definitions adopted — QueueReader inherits from ProducerNode, QueueNode inherits from NonBlockingNode.
 
-### 13.5 Async Execution Model
+### 12.5 Async Execution Model
 
 * **v0-v3:** Not explicitly addressed.
 * **v4:** Explicitly allows `async/await` internally while preserving LoopManager's synchronous contract.
 * **Updated Resolution (2024):** The entire codebase now uses async/await throughout. All nodes implement `async def execute()`, and LoopManager uses await for all node executions. This is a fundamental architectural change from the original v4 specification.
 
-### 13.6 Queue Transport
+### 12.6 Queue Transport
 
 * **v1:** General messaging interface.
 * **v2-v4:** Redis-backed QueueManager mandated.
@@ -419,7 +373,7 @@ This section documents how conflicts between different versions were resolved, w
 
 ---
 
-## 14. Architecture Diagram Reference
+## 13. Architecture Diagram Reference
 
 For a visual representation of the node architecture, refer to `Node Architecture.png` in the project directory.
 
