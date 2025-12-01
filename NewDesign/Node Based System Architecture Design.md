@@ -11,6 +11,7 @@ The orchestrator ensures that nodes inside one loop and nodes across different l
 ### 1.1 Key Principles
 
 * **Isolation:** Loops are fully isolated execution tracks running in separate pools (asyncio, threads, or processes).
+* **Adaptive Execution:** The execution pool for a loop is determined dynamically based on the requirements of its constituent nodes, ensuring optimal resource usage.
 * **Decoupling:** Cross-loop data flow is handled exclusively via an abstracted, multi-process safe queue system (Redis).
 * **Predictability:** Node execution behavior is strictly determined by the **node type** and the **LoopManager**'s async execution strategy.
 * **Fail-Fast:** Immediate failure policy with zero retries to preserve throughput and isolate problematic payloads.
@@ -27,6 +28,7 @@ A **Node** is the smallest executable unit inside a workflow loop. Each node inh
 * Each node receives two objects:
   * `NodeConfig` — static initialization/config settings
   * `NodeData` — runtime payload for the iteration
+* Each node also defines a preferred **`ExecutionPool`** (e.g., `ASYNC`, `THREAD`, `PROCESS`) via an enum property, indicating the ideal environment for its execution.
 * All nodes implement an **async `execute()` method**: the LoopManager **awaits** `await node.execute(...)` before moving on.
 * Nodes use `async/await` throughout their implementation for I/O operations, queue access, and any asynchronous work.
 * Nodes never manage their own concurrency; they simply "run" when invoked by the LoopManager via async execution.
@@ -85,11 +87,10 @@ The orchestrator supports three fundamental node types:
 
 A **Loop** is a continuous execution track controlled by a single **ProducerNode**. It contains a chain of Blocking and NonBlocking nodes.
 
-* Each loop runs in its own execution pool:
-  * **Asyncio Event Loop** — for async/await-based execution (primary mode)
-  * **ThreadPool** — for thread-based execution (with async support)
-  * **ProcessPool** — for process-based execution (with async support)
-* **Note:** Asyncio is the **primary and recommended** pool type for the LoopManager's core execution flow. All nodes use async/await throughout.
+* A loop's execution pool is determined **dynamically** by the **LoopManager** before execution begins.
+* The LoopManager inspects the preferred `ExecutionPool` of every node within the loop. It then selects the pool with the highest-priority requirement among all nodes for executing the entire loop cycle.
+* The priority order is: `PROCESS` (highest) > `THREAD` (medium) > `ASYNC` (lowest).
+* For example, if a loop contains nodes with preferences `[ASYNC, THREAD, ASYNC]`, the entire loop will run in a **ThreadPool** for that cycle.
 * Loops behave like async pipelines with timing rules defined by the node types.
 * Loops are fully isolated execution tracks.
 
@@ -169,7 +170,7 @@ This enables plug-and-play pipelines and decouples loops without requiring them 
 * Load workflows (React Flow JSON) and initialize `NodeConfig` for each node.
 * Build loops from node graphs (using edges to construct execution chains).
 * Start, stop, pause, and resume loops (all operations are async).
-* Assign pool types (Asyncio Event Loop, ThreadPool, or ProcessPool) per loop.
+* Manages the execution context, delegating the dynamic selection of a loop's execution pool (Asyncio, ThreadPool, or ProcessPool) to the LoopManager.
 
 ### 5.2 Loop Execution
 
@@ -212,9 +213,9 @@ The orchestrator should expose:
 LoopManager handles one loop at a time:
 
 * Maintains reference to the ProducerNode.
+* Determines the execution pool for the loop by calling a dedicated method (e.g., `select_pool()`). This method inspects the `ExecutionPool` preference of all nodes in the chain and selects the highest-priority pool (`PROCESS` > `THREAD` > `ASYNC`).
 * Executes node chains in defined order; awaits each node's `execute()` to complete.
 * Handles data transformation and passes NodeData to downstream nodes.
-* Delegates pool allocation (asyncio, thread, or process) to orchestrator config.
 * Reports node-level exceptions and routes failed payloads to DLQ (all operations are async).
 
 **LoopManager must NOT**:
@@ -318,8 +319,9 @@ The following items are left to implementation and are not required to block the
 * **BaseNode:** The base class from which all nodes inherit.
 * **BlockingNode:** Must finish (and downstream blocking chain must finish) before continuing.
 * **DLQ:** Dead-Letter Queue storing failed NodeData + error context.
+* **ExecutionPool:** An enum (`ASYNC`, `THREAD`, `PROCESS`) defined on each node to declare its preferred execution environment. Used by the LoopManager to dynamically select the runtime for a loop.
 * **Loop:** A continuous execution track controlled by a single ProducerNode, running in an isolated pool (Asyncio Event Loop, ThreadPool, or ProcessPool).
-* **LoopManager:** The per-loop executor that runs nodes in sequence and enforces async iteration semantics using await.
+* **LoopManager:** The per-loop executor that runs nodes in sequence and enforces async iteration semantics using await. It also dynamically determines the correct execution pool (`ExecutionPool`) for each loop cycle.
 * **NodeConfig:** Static initialization/config data passed to nodes during initialization.
 * **NodeData:** Runtime payload passed to nodes during execution.
 * **Non-Blocking Node:** Marks iteration end in the execution model; executed asynchronously using await.
