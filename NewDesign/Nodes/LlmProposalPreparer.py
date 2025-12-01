@@ -1,0 +1,15 @@
+from .BlockingNode import BlockingNode
+from .NodeData import NodeData
+from .ExecutionPool import ExecutionPool
+import asyncio
+
+class LlmProposalPreparer(BlockingNode):
+    @property
+    def execution_pool(self) -> ExecutionPool:
+        return ExecutionPool.ASYNC
+
+    async def execute(self, node_data: NodeData) -> NodeData:
+        print(f"[{self.config.node_name}] Preparing proposal with LLM...")
+        await asyncio.sleep(1.0)
+        node_data.payload["proposal"] = "Generated Proposal Content..."
+        return node_data
