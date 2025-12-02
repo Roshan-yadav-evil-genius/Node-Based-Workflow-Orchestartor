@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Any, Dict
 from ...Core.ProducerNode import ProducerNode
 from ...Core.NodeData import NodeData
 from ...Core.ExecutionPool import ExecutionPool
@@ -18,16 +20,31 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         return ExecutionPool.ASYNC
 
     async def execute(self, node_data: NodeData) -> NodeData:
-        logger.info(f"[{self.config.node_name}] Monitoring freelance jobs...")
-        await asyncio.sleep(0.5) # Simulate delay
-        
-        # Simulate finding a job
-        job_id = str(uuid.uuid4())
-        job_title = random.choice(["Python Developer", "React Developer", "Data Scientist", "Java Engineer"])
-        logger.info(f"[{self.config.node_name}] Found job: {job_title}")
-        
+        logger.info(f"Monitoring freelance jobs...",node_id=self.config.node_id)
+
+        await asyncio.sleep(5) # Simulate delay
+        job_data = self.get_job_data()
+        logger.info("Found job",node_id=self.config.node_id,data=job_data)
+
         return NodeData(
-            id=job_id,
-            payload={"job_title": job_title, "description": "Sample job description"},
-            metadata={"source": "freelance_site"}
+            id=self.config.node_id,
+            payload=job_data,
+            metadata={"sourceNodeID": self.config.node_id,"sourceNodeName": self.config.node_name}
         )
+    
+    def get_job_data(self) -> Dict[str, Any]:
+        job_title = random.choice(["Python Developer", "React Developer", "Data Scientist", "Java Engineer", "Python Fullstack Developer", "React Fullstack Developer", "Data Science Fullstack Developer", "Java Fullstack Developer"])
+        job_descript = random.choice(["We are looking for a Python Developer with 3 years of experience in Django and Flask.", "We are looking for a React Developer with 2 years of experience in React and React Native.", "We are looking for a Data Scientist with 5 years of experience in data analysis and machine learning.", "We are looking for a Java Engineer with 4 years of experience in Spring Boot and Hibernate."])
+        job_budget = random.randint(100, 1000)
+        job_posting_date = datetime.now().strftime("%Y-%m-%d")
+        job_location = random.choice(["Remote", "On-site", "Hybrid"])
+
+        job_data = {
+            "job_id": str(uuid.uuid4()),
+            "job_title": job_title,
+            "description": job_descript,
+            "budget": job_budget,
+            "posting_date": job_posting_date,
+            "location": job_location
+        }
+        return job_data

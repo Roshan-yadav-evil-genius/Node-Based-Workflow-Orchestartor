@@ -16,15 +16,16 @@ class IfPythonJob(BlockingNode):
         return ExecutionPool.ASYNC
 
     async def execute(self, node_data: NodeData) -> NodeData:
-        logger.info(f"[{self.config.node_name}] Checking if job is Python related...")
-        await asyncio.sleep(0.1)
+        logger.info("Checking if job is Python related...",node_id=self.config.node_id)
+
+        await asyncio.sleep(5)
         
         title = node_data.payload.get("job_title", "").lower()
         is_python = "python" in title
         
         # In a real graph, we would handle conditional edges here.
         # For this simulation, we'll just add a flag to metadata.
-        node_data.metadata["is_python"] = is_python
-        logger.info(f"[{self.config.node_name}] Is Python? {is_python}")
+        node_data.metadata["condition"] = is_python
+        logger.info("Condition: {is_python}",node_id=self.config.node_id,condition=is_python)
         
         return node_data
