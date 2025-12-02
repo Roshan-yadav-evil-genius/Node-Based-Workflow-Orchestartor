@@ -1,9 +1,11 @@
 import asyncio
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set
 from Nodes.BaseNode import BaseNode
 from Nodes.NodeData import NodeData
 from Nodes.NodeConfig import NodeConfig
+from Nodes.ProducerNode import ProducerNode
+from Nodes.NonBlockingNode import NonBlockingNode
 from LoopManager import LoopManager
 from QueueManager import QueueManager
 
@@ -75,43 +77,78 @@ class WorkflowOrchestrator:
                 self.register_node(node_instance)
                 print(f"[Orchestrator] Registered node: {node_id} ({node_type})")
 
-        # 2. Create Loops (Simplified logic for simulation)
-        # In a real system, we would traverse the graph to identify loops.
-        # Here we manually define the main loop based on the known structure for simulation.
-        # We look for the Producer and create a loop starting from it.
-        
-        # Find Producer
-        producer_id = "playwright-freelance-job-monitor-producer"
-        if producer_id in self.nodes:
-            # Manually defining the chain for this specific simulation to ensure order
-            # In a real system, this is derived from 'edges'
-            chain_ids = [
-                "if-python-job",
-                "store-node",
-                "store-reader",
-                "ai-ml-scoring",
-                "if-score-threshold",
-                # Branching is complex to represent in a linear list for this simple LoopManager.
-                # For simulation, we will add the main path nodes.
-                "queue-node" 
-            ]
-            
-            # Filter out missing nodes just in case
-            chain_ids = [nid for nid in chain_ids if nid in self.nodes]
-            
-            self.create_loop(producer_id, chain_ids)
-            print(f"[Orchestrator] Created loop starting at {producer_id}")
+        # 2. Build edge map from workflow edges
+        edges = workflow_json.get("edges", [])
+        edge_map: Dict[str, List[str]] = {}  # source -> [targets]
+        for edge in edges:
+            source = edge.get("source")
+            target = edge.get("target")
+            if source and target:
+                if source not in edge_map:
+                    edge_map[source] = []
+                edge_map[source].append(target)
 
-            # Create second loop for queue reader
-            reader_id = "queue-reader"
-            if reader_id in self.nodes:
-                chain_ids_2 = [
-                    "llm-proposal-preparer",
-                    "playwright-freelance-bidder"
-                ]
-                chain_ids_2 = [nid for nid in chain_ids_2 if nid in self.nodes]
-                self.create_loop(reader_id, chain_ids_2)
-                print(f"[Orchestrator] Created loop starting at {reader_id}")
+        # 3. Find all ProducerNodes dynamically
+        producer_nodes: List[str] = []
+        for node_id, node in self.nodes.items():
+            if isinstance(node, ProducerNode):
+                producer_nodes.append(node_id)
+                print(f"[Orchestrator] Found ProducerNode: {node_id}")
+
+        # 4. For each ProducerNode, traverse graph to build chain until NonBlockingNode
+        for producer_id in producer_nodes:
+            chain_ids = self._traverse_chain_from_producer(producer_id, edge_map)
+            
+            if chain_ids:
+                self.create_loop(producer_id, chain_ids)
+                print(f"[Orchestrator] Created loop starting at {producer_id} with chain: {chain_ids}")
+            else:
+                print(f"[Orchestrator] Warning: No chain found for ProducerNode {producer_id}")
+
+    def _traverse_chain_from_producer(self, producer_id: str, edge_map: Dict[str, List[str]]) -> List[str]:
+        """
+        Traverse the graph from a ProducerNode following edges until a NonBlockingNode is reached.
+        Returns the chain of node IDs (excluding the producer itself).
+        """
+        chain_ids: List[str] = []
+        visited: Set[str] = {producer_id}  # Track visited nodes to avoid cycles
+        current_id = producer_id
+        
+        while current_id in edge_map:
+            # Get next nodes from edges
+            next_nodes = edge_map[current_id]
+            
+            # For now, follow the first path (can be extended to handle branching)
+            # In a more sophisticated implementation, we might handle all branches
+            if not next_nodes:
+                break
+                
+            next_id = next_nodes[0]  # Take first edge
+            
+            # Check if we've already visited this node (cycle detection)
+            if next_id in visited:
+                print(f"[Orchestrator] Warning: Cycle detected at node {next_id}, stopping traversal")
+                break
+            
+            # Check if node exists
+            if next_id not in self.nodes:
+                print(f"[Orchestrator] Warning: Node {next_id} referenced in edges but not found")
+                break
+            
+            # Add to chain
+            chain_ids.append(next_id)
+            visited.add(next_id)
+            
+            # Check if this is a NonBlockingNode (marks loop end)
+            next_node = self.nodes[next_id]
+            if isinstance(next_node, NonBlockingNode):
+                # Found loop end marker
+                break
+            
+            # Continue to next node
+            current_id = next_id
+        
+        return chain_ids
 
     def _create_node_instance(self, node_type: str, config: NodeConfig) -> BaseNode:
         # Import here to avoid circular imports if any, or just for cleanliness

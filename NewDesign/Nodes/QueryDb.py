@@ -1,9 +1,9 @@
-from .BlockingNode import BlockingNode
+from .ProducerNode import ProducerNode
 from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 import asyncio
 
-class QueryDb(BlockingNode):
+class QueryDb(ProducerNode):
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

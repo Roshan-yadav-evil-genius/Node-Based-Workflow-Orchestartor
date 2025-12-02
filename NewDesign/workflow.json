@@ -1,7 +1,7 @@
 {
   "nodes": [
     {
-      "id": "playwright-freelance-job-monitor-producer",
+      "id": "1",
       "type": "playwright-freelance-job-monitor-producer",
       "data": {
         "execution_pool": "async",
@@ -9,7 +9,7 @@
       }
     },
     {
-      "id": "if-python-job",
+      "id": "2",
       "type": "if-python-job",
       "data": {
         "execution_pool": "async",
@@ -17,7 +17,7 @@
       }
     },
     {
-      "id": "store-node",
+      "id": "3",
       "type": "store-node",
       "data": {
         "execution_pool": "async",
@@ -27,7 +27,7 @@
       }
     },
     {
-      "id": "store-reader",
+      "id": "4",
       "type": "store-reader",
       "data": {
         "execution_pool": "async",
@@ -35,7 +35,7 @@
       }
     },
     {
-      "id": "ai-ml-scoring",
+      "id": "5",
       "type": "ai-ml-scoring",
       "data": {
         "execution_pool": "async",
@@ -43,7 +43,7 @@
       }
     },
     {
-      "id": "if-score-threshold",
+      "id": "6",
       "type": "if-score-threshold",
       "data": {
         "execution_pool": "async",
@@ -53,7 +53,7 @@
       }
     },
     {
-      "id": "queue-node",
+      "id": "7",
       "type": "queue-node-dummy",
       "data": {
         "execution_pool": "async",
@@ -63,7 +63,7 @@
       }
     },
     {
-      "id": "queue-reader",
+      "id": "8",
       "type": "queue-reader-dummy",
       "data": {
         "execution_pool": "async",
@@ -73,7 +73,7 @@
       }
     },
     {
-      "id": "llm-proposal-preparer",
+      "id": "9",
       "type": "llm-proposal-preparer",
       "data": {
         "execution_pool": "async",
@@ -81,7 +81,7 @@
       }
     },
     {
-      "id": "playwright-freelance-bidder",
+      "id": "10",
       "type": "playwright-freelance-bidder",
       "data": {
         "execution_pool": "async",
@@ -89,7 +89,7 @@
       }
     },
     {
-      "id": "db-node",
+      "id": "11",
       "type": "db-node",
       "data": {
         "execution_pool": "async",
@@ -99,7 +99,7 @@
       }
     },
     {
-      "id": "query-db",
+      "id": "12",
       "type": "query-db",
       "data": {
         "execution_pool": "async",
@@ -107,7 +107,7 @@
       }
     },
     {
-      "id": "telegram-sender",
+      "id": "13",
       "type": "telegram-sender",
       "data": {
         "execution_pool": "async",
@@ -117,7 +117,7 @@
       }
     },
     {
-      "id": "db-status-updater",
+      "id": "14",
       "type": "db-status-updater",
       "data": {
         "execution_pool": "async",
@@ -127,95 +127,97 @@
   ],
   "edges": [
     {
-      "id": "edge-1",
-      "source": "playwright-freelance-job-monitor-producer",
-      "target": "if-python-job",
+      "id": "1",
+      "source": "1",
+      "target": "2",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-2",
-      "source": "if-python-job",
-      "target": "store-node",
+      "id": "2",
+      "source": "2",
+      "target": "3",
       "sourceHandle": "Yes",
       "targetHandle": null
     },
     {
-      "id": "edge-3",
-      "source": "store-node",
-      "target": "store-reader",
+      "id": "3",
+      "source": "3",
+      "target": "4",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-4",
-      "source": "store-reader",
-      "target": "ai-ml-scoring",
+      "id": "4",
+      "source": "4",
+      "target": "5",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-5",
-      "source": "ai-ml-scoring",
-      "target": "if-score-threshold",
+      "id": "5",
+      "source": "5",
+      "target": "6",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-6",
-      "source": "if-score-threshold",
-      "target": "queue-node",
+      "id": "6",
+      "source": "6",
+      "target": "7",
       "sourceHandle": "Yes",
       "targetHandle": null
     },
     {
-      "id": "edge-7",
-      "source": "queue-node",
-      "target": "queue-reader",
+      "id": "7",
+      "source": "7",
+      "target": "8",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-8",
-      "source": "queue-reader",
-      "target": "llm-proposal-preparer",
+      "id": "8",
+      "source": "8",
+      "target": "9",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-9",
-      "source": "llm-proposal-preparer",
-      "target": "playwright-freelance-bidder",
+      "id": "9",
+      "source": "9",
+      "target": "10",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-10",
-      "source": "if-score-threshold",
-      "target": "db-node",
+      "id": "10",
+      "source": "6",
+      "target": "11",
       "sourceHandle": "No",
       "targetHandle": null
     },
     {
-      "id": "edge-11",
-      "source": "db-node",
-      "target": "query-db",
+      "id": "11",
+      "source": "11",
+      "target": "12",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-12",
-      "source": "query-db",
-      "target": "telegram-sender",
+      "id": "12",
+      "source": "12",
+      "target": "13",
       "sourceHandle": null,
       "targetHandle": null
     },
     {
-      "id": "edge-13",
-      "source": "telegram-sender",
-      "target": "db-status-updater",
+      "id": "13",
+      "source": "13",
+      "target": "14",
       "sourceHandle": null,
       "targetHandle": null
     }
   ]
 }
+
+
