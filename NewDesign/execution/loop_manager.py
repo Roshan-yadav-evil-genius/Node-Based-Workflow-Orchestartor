@@ -6,7 +6,7 @@ from Nodes.Core.ProducerNode import ProducerNode
 from Nodes.Core.BlockingNode import BlockingNode
 from Nodes.Core.NonBlockingNode import NonBlockingNode
 from Nodes.Core.NodeData import NodeData
-from Executor import Executor
+from execution.executor import Executor
 
 logger = structlog.get_logger(__name__)
 

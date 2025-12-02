@@ -6,8 +6,8 @@ import sys
 sys.path.append(os.getcwd())
 
 import structlog
-from logging_config import setup_logging
-from WorkflowOrchestrator import WorkflowOrchestrator
+from config.logging_config import setup_logging
+from core.orchestrator import WorkflowOrchestrator
 
 logger = structlog.get_logger(__name__)
 
@@ -16,8 +16,9 @@ async def main():
     setup_logging()
     
     try:
-        # Load workflow.json
-        with open("workflow.json", "r") as f:
+        # Load workflow.json from test folder
+        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
+        with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
             
         orchestrator = WorkflowOrchestrator()

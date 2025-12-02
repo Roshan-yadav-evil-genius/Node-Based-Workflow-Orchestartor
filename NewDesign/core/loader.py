@@ -3,8 +3,8 @@ from typing import Dict, List, Any
 from Nodes.Core.BaseNode import BaseNode
 from Nodes.Core.NodeConfig import NodeConfig
 from Nodes.Core.ProducerNode import ProducerNode
-from NodeFactory import NodeFactory
-from WorkflowGraph import WorkflowGraph
+from core.node_factory import NodeFactory
+from core.graph import WorkflowGraph
 
 logger = structlog.get_logger(__name__)
 

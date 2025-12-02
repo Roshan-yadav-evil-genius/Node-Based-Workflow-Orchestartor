@@ -1,7 +1,7 @@
 from ...Core.NonBlockingNode import NonBlockingNode
 from ...Core.NodeData import NodeData
 from ...Core.ExecutionPool import ExecutionPool
-from DataStore import DataStore
+from storage.data_store import DataStore
 import asyncio
 import structlog
 

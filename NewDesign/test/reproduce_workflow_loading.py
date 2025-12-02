@@ -6,15 +6,16 @@ import sys
 # Add the current directory to sys.path to ensure imports work
 sys.path.append(os.getcwd())
 
-from WorkflowOrchestrator import WorkflowOrchestrator
+from core.orchestrator import WorkflowOrchestrator
 
 
 async def main():
     print("--- Starting Reproduction Script ---")
 
-    # 1. Load workflow.json
+    # 1. Load workflow.json from test folder
     try:
-        with open("workflow.json", "r") as f:
+        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
+        with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
         print("Loaded workflow.json")
     except FileNotFoundError:

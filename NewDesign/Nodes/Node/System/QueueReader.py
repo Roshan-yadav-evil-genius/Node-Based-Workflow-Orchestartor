@@ -1,7 +1,7 @@
 from ...Core.ProducerNode import ProducerNode
 from ...Core.NodeData import NodeData
 from ...Core.ExecutionPool import ExecutionPool
-from DataStore import DataStore
+from storage.data_store import DataStore
 import asyncio
 import structlog
 import uuid

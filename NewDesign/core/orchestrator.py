@@ -3,10 +3,10 @@ import structlog
 from typing import Dict, List, Any
 from Nodes.Core.BaseNode import BaseNode
 from Nodes.Core.NodeData import NodeData
-from LoopManager import LoopManager
-from DataStore import DataStore
-from WorkflowLoader import WorkflowLoader
-from GraphTraverser import GraphTraverser
+from execution.loop_manager import LoopManager
+from storage.data_store import DataStore
+from core.loader import WorkflowLoader
+from core.traverser import GraphTraverser
 
 logger = structlog.get_logger(__name__)
 
@@ -84,4 +84,3 @@ class WorkflowOrchestrator:
                 logger.info(f"[Orchestrator] Created loop starting at {producer_id} with chain: {chain_ids}")
             else:
                 logger.warning(f"[Orchestrator] Warning: No chain found for ProducerNode {producer_id}")
-
