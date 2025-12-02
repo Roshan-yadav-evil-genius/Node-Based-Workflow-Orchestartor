@@ -3,6 +3,7 @@ from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 import asyncio
 
+
 class TelegramSender(BlockingNode):
     @classmethod
     def identifier(cls) -> str:
@@ -10,7 +11,7 @@ class TelegramSender(BlockingNode):
 
     @property
     def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+        return ExecutionPool.THREAD
 
     async def execute(self, node_data: NodeData) -> NodeData:
         print(f"[{self.config.node_name}] Sending Telegram notification...")
