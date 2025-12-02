@@ -5,7 +5,6 @@ from Nodes.ProducerNode import ProducerNode
 from Nodes.BlockingNode import BlockingNode
 from Nodes.NonBlockingNode import NonBlockingNode
 from Nodes.NodeData import NodeData
-from Nodes.ExecutionPool import ExecutionPool
 from Executor import Executor
 
 class LoopManager:
@@ -18,40 +17,24 @@ class LoopManager:
         self.chain = chain # List of nodes after the producer
         self.executor = executor or Executor()
         self.running = False
-        self.selected_pool: Optional[ExecutionPool] = None
-
-    def select_pool(self) -> ExecutionPool:
-        """
-        Determines the execution pool for the loop.
-        Priority: PROCESS > THREAD > ASYNC
-        """
-        pools = [self.producer.execution_pool] + [node.execution_pool for node in self.chain]
-        
-        if ExecutionPool.PROCESS in pools:
-            return ExecutionPool.PROCESS
-        if ExecutionPool.THREAD in pools:
-            return ExecutionPool.THREAD
-        return ExecutionPool.ASYNC
 
     async def start(self):
         self.running = True
-        # Determine and store the execution pool for this loop
-        self.selected_pool = self.select_pool()
-        print(f"[LoopManager] Starting loop with pool: {self.selected_pool.value}")
+        print(f"[LoopManager] Starting loop (each node executes in its preferred pool)")
         
         while self.running:
             try:
-                # 1. Execute Producer in selected pool
+                # 1. Execute Producer in its preferred pool
                 data = await self.executor.execute_in_pool(
-                    self.selected_pool,
+                    self.producer.execution_pool,
                     self.producer,
                     NodeData(id="init", payload={})
                 )
                 
-                # 2. Execute Chain (Blocking -> NonBlocking) in selected pool
+                # 2. Execute Chain (Blocking -> NonBlocking) - each node in its preferred pool
                 for node in self.chain:
                     data = await self.executor.execute_in_pool(
-                        self.selected_pool,
+                        node.execution_pool,
                         node,
                         data
                     )
