@@ -4,7 +4,7 @@ from Nodes.NodeConfig import NodeConfig
 from Nodes.ProducerNode import ProducerNode
 from NodeFactory import NodeFactory
 from WorkflowGraph import WorkflowGraph
-
+from rich import print
 
 class WorkflowLoader:
     """
@@ -48,7 +48,7 @@ class WorkflowLoader:
             node_instance = self.node_factory.create_node(node_type, config)
             if node_instance:
                 nodes[node_id] = node_instance
-                print(f"[WorkflowLoader] Registered node: {node_id} ({node_type})")
+                print(f"[WorkflowLoader] Registered node: {node_id} of type {node_instance.__class__.__name__}({node_type})")
         
         # 2. Build edge map from workflow edges with metadata
         edge_map = self._build_edge_map(workflow_json.get("edges", []))
@@ -58,7 +58,7 @@ class WorkflowLoader:
         for node_id, node in nodes.items():
             if isinstance(node, ProducerNode):
                 producer_nodes.append(node_id)
-                print(f"[WorkflowLoader] Found ProducerNode: {node_id}")
+                print(f"[WorkflowLoader] Found ProducerNode: {node_id} of type {node.__class__.__name__}({node.identifier()})")
         
         return WorkflowGraph(
             nodes=nodes,

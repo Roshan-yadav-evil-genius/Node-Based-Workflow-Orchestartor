@@ -1,7 +1,7 @@
 from typing import Dict, List, Set, Tuple
 from Nodes.BaseNode import BaseNode
 from Nodes.NonBlockingNode import NonBlockingNode
-
+from rich import print
 
 class GraphTraverser:
     """

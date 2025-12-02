@@ -6,6 +6,7 @@ from LoopManager import LoopManager
 from QueueManager import QueueManager
 from WorkflowLoader import WorkflowLoader
 from GraphTraverser import GraphTraverser
+from rich import print
 
 class WorkflowOrchestrator:
     """
@@ -72,7 +73,7 @@ class WorkflowOrchestrator:
         # Delegate graph traversal to GraphTraverser
         graph_traverser = GraphTraverser(workflow_graph.nodes)
         loops = graph_traverser.find_loops(workflow_graph.edge_map, workflow_graph.producer_nodes)
-        
+        print("Loops: ", loops)
         # Create loops from traversal results
         for producer_id, chain_ids, branch_info in loops:
             if chain_ids:
