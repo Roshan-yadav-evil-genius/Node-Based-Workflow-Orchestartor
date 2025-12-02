@@ -10,7 +10,7 @@
     },
     {
       "id": "2",
-      "type": "if-python-job",
+      "type": "if-condition",
       "data": {
         "execution_pool": "async",
         "config": {}
@@ -44,7 +44,7 @@
     },
     {
       "id": "6",
-      "type": "if-score-threshold",
+      "type": "cosine-similarity",
       "data": {
         "execution_pool": "async",
         "config": {

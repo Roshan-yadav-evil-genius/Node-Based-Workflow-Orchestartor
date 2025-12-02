@@ -8,6 +8,7 @@ from Nodes.Core.NodeConfig import NodeConfig
 from Nodes.Core.ProducerNode import ProducerNode
 from Nodes.Core.BlockingNode import BlockingNode
 from Nodes.Core.NonBlockingNode import NonBlockingNode
+from Nodes.Core.LogicalNodes import LogicalNodes
 
 logger = structlog.get_logger(__name__)
 
@@ -23,7 +24,7 @@ class NodeFactory:
     _node_registry: Optional[Dict[str, Type[BaseNode]]] = None
     
     # Abstract base classes to exclude from discovery
-    _abstract_base_classes = {BaseNode, ProducerNode, BlockingNode, NonBlockingNode}
+    _abstract_base_classes = {BaseNode, ProducerNode, BlockingNode, NonBlockingNode, LogicalNodes}
     
     @classmethod
     def _discover_node_classes(cls) -> Dict[str, Type[BaseNode]]:
