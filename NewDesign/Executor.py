@@ -71,6 +71,22 @@ class Executor:
         """Execute node directly in async context."""
         return await node.execute(node_data)
     
+    @staticmethod
+    def _run_in_thread(node: 'BaseNode', node_data: NodeData) -> NodeData:
+        """
+        Static method to execute a node in a thread pool.
+        
+        This method is static for consistency with _run_in_process, even though
+        ThreadPoolExecutor doesn't require pickling (threads share memory).
+        The nested function approach would also work, but this maintains consistency.
+        """
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            return new_loop.run_until_complete(node.execute(node_data))
+        finally:
+            new_loop.close()
+    
     async def _execute_thread(self, node: 'BaseNode', node_data: NodeData) -> NodeData:
         """Execute node in thread pool."""
         if self._thread_pool is None:
@@ -78,17 +94,53 @@ class Executor:
         
         loop = asyncio.get_event_loop()
         
-        # Run the async execute method in the thread pool
-        # We need to create a new event loop in the thread
-        def run_in_thread():
-            new_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(new_loop)
-            try:
-                return new_loop.run_until_complete(node.execute(node_data))
-            finally:
-                new_loop.close()
+        return await loop.run_in_executor(
+            self._thread_pool,
+            Executor._run_in_thread,
+            node,
+            node_data
+        )
+    
+    @staticmethod
+    def _run_in_process(serialized_node_bytes: bytes, serialized_data_bytes: bytes) -> bytes:
+        """
+        Static method to execute a node in a process pool.
         
-        return await loop.run_in_executor(self._thread_pool, run_in_thread)
+        REASON FOR STATIC METHOD:
+        This method MUST be static (not an instance method) because:
+        
+        1. ProcessPoolExecutor requires functions to be picklable (serializable)
+        2. Nested functions (defined inside methods) that reference 'self' or instance
+           methods cannot be pickled - Python's pickle module cannot serialize local
+           functions that capture instance state
+        3. When a nested function references 'self._deserialize_node_from_process()',
+           pickle tries to serialize the entire Executor instance, which fails with:
+           "Can't get local object 'Executor._execute_process.<locals>.run_in_process'"
+        
+        4. Static methods can be pickled because:
+           - They don't depend on instance state (no 'self' parameter)
+           - They don't require an instance to be called
+           - They use only their parameters and standard library functions (pickle, asyncio)
+        
+        By making this a static method, we keep it organized within the Executor class
+        while ensuring it can be safely passed to ProcessPoolExecutor.run_in_executor()
+        without pickling issues.
+        """
+        # Deserialize in the process
+        try:
+            node = pickle.loads(serialized_node_bytes)
+            node_data = pickle.loads(serialized_data_bytes)
+        except (pickle.PickleError, AttributeError) as e:
+            raise ValueError(f"Cannot deserialize in process pool: {e}") from e
+        
+        # Create new event loop in process
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            result = new_loop.run_until_complete(node.execute(node_data))
+            return pickle.dumps(result)
+        finally:
+            new_loop.close()
     
     async def _execute_process(self, node: 'BaseNode', node_data: NodeData) -> NodeData:
         """Execute node in process pool."""
@@ -106,26 +158,9 @@ class Executor:
         except (pickle.PickleError, AttributeError) as e:
             raise ValueError(f"Cannot serialize node for process pool: {e}") from e
         
-        def run_in_process(serialized_node_bytes: bytes, serialized_data_bytes: bytes) -> bytes:
-            # Deserialize in the process
-            try:
-                node = self._deserialize_node_from_process(serialized_node_bytes)
-                node_data = self._deserialize_data_from_process(serialized_data_bytes)
-            except (pickle.PickleError, AttributeError) as e:
-                raise ValueError(f"Cannot deserialize in process pool: {e}") from e
-            
-            # Create new event loop in process
-            new_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(new_loop)
-            try:
-                result = new_loop.run_until_complete(node.execute(node_data))
-                return self._serialize_data_for_process(result)
-            finally:
-                new_loop.close()
-        
         result_bytes = await loop.run_in_executor(
             self._process_pool,
-            run_in_process,
+            Executor._run_in_process,
             serialized_node,
             serialized_data
         )
