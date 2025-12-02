@@ -3,7 +3,7 @@ from typing import Dict, List, Any
 from Nodes.BaseNode import BaseNode
 from Nodes.NodeData import NodeData
 from LoopManager import LoopManager
-from QueueManager import QueueManager
+from DataStore import DataStore
 from WorkflowLoader import WorkflowLoader
 from GraphTraverser import GraphTraverser
 from rich import print
@@ -14,7 +14,7 @@ class WorkflowOrchestrator:
     Follows Single Responsibility Principle - only handles coordination and lifecycle management.
     """
     def __init__(self):
-        self.queue_manager = QueueManager()
+        self.data_store = DataStore.set_shared_instance(DataStore())
         self.loop_managers: List[LoopManager] = []
         self.nodes: Dict[str, BaseNode] = {}  # Map of all nodes by ID
         self.loop_branches: Dict[str, Dict[str, List[str]]] = {}  # producer_id -> {branch_label: [node_ids]}
