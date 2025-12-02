@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class PlaywrightFreelanceBidder(NonBlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "playwright-freelance-bidder"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class StoreReader(ProducerNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "store-reader"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class QueueNode(NonBlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "queue-node-dummy"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

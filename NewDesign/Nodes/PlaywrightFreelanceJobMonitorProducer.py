@@ -6,6 +6,10 @@ import uuid
 import random
 
 class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "playwright-freelance-job-monitor-producer"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

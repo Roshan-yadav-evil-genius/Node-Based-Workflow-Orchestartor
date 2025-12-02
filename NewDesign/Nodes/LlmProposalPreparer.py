@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class LlmProposalPreparer(BlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "llm-proposal-preparer"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

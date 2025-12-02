@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class QueryDb(ProducerNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "query-db"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

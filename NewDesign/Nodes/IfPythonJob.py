@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class IfPythonJob(BlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "if-python-job"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

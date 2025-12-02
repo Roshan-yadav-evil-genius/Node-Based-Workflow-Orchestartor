@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class TelegramSender(BlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "telegram-sender"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

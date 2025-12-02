@@ -4,6 +4,10 @@ from .ExecutionPool import ExecutionPool
 import asyncio
 
 class IfScoreThreshold(BlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "if-score-threshold"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

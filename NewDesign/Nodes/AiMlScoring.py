@@ -5,6 +5,10 @@ import asyncio
 import random
 
 class AiMlScoring(BlockingNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "ai-ml-scoring"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

@@ -5,6 +5,10 @@ import asyncio
 import uuid
 
 class QueueReader(ProducerNode):
+    @classmethod
+    def identifier(cls) -> str:
+        return "queue-reader-dummy"
+
     @property
     def execution_pool(self) -> ExecutionPool:
         return ExecutionPool.ASYNC

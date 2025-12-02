@@ -21,3 +21,12 @@ class BaseNode(ABC):
         Execute the node logic.
         """
         pass
+
+    @classmethod
+    @abstractmethod
+    def identifier(cls) -> str:
+        """
+        Return the node type identifier (kebab-case string).
+        This identifier is used to map node types from workflow definitions to node classes.
+        """
+        pass
