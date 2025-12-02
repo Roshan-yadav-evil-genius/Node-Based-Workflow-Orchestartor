@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List
-from Nodes.BaseNode import BaseNode
+from Nodes.Core.BaseNode import BaseNode
 
 
 @dataclass

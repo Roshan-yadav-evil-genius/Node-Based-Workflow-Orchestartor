@@ -1,6 +1,6 @@
-from .ProducerNode import ProducerNode
-from .NodeData import NodeData
-from .ExecutionPool import ExecutionPool
+from ...Core.ProducerNode import ProducerNode
+from ...Core.NodeData import NodeData
+from ...Core.ExecutionPool import ExecutionPool
 import asyncio
 import structlog
 import uuid

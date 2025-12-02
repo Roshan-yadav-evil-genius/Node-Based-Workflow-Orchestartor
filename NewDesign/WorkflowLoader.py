@@ -1,8 +1,8 @@
 import structlog
 from typing import Dict, List, Any
-from Nodes.BaseNode import BaseNode
-from Nodes.NodeConfig import NodeConfig
-from Nodes.ProducerNode import ProducerNode
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.NodeConfig import NodeConfig
+from Nodes.Core.ProducerNode import ProducerNode
 from NodeFactory import NodeFactory
 from WorkflowGraph import WorkflowGraph
 

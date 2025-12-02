@@ -10,11 +10,11 @@ import pickle
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, TYPE_CHECKING
 
-from Nodes.ExecutionPool import ExecutionPool
-from Nodes.NodeData import NodeData
+from Nodes.Core.ExecutionPool import ExecutionPool
+from Nodes.Core.NodeData import NodeData
 
 if TYPE_CHECKING:
-    from Nodes.BaseNode import BaseNode
+    from Nodes.Core.BaseNode import BaseNode
 
 
 class Executor:

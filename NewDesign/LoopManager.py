@@ -1,11 +1,11 @@
 import asyncio
 import structlog
 from typing import List, Optional
-from Nodes.BaseNode import BaseNode
-from Nodes.ProducerNode import ProducerNode
-from Nodes.BlockingNode import BlockingNode
-from Nodes.NonBlockingNode import NonBlockingNode
-from Nodes.NodeData import NodeData
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.ProducerNode import ProducerNode
+from Nodes.Core.BlockingNode import BlockingNode
+from Nodes.Core.NonBlockingNode import NonBlockingNode
+from Nodes.Core.NodeData import NodeData
 from Executor import Executor
 
 logger = structlog.get_logger(__name__)

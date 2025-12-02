@@ -3,11 +3,11 @@ from typing import Optional, Dict, Type
 import pkgutil
 import importlib
 import inspect
-from Nodes.BaseNode import BaseNode
-from Nodes.NodeConfig import NodeConfig
-from Nodes.ProducerNode import ProducerNode
-from Nodes.BlockingNode import BlockingNode
-from Nodes.NonBlockingNode import NonBlockingNode
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.NodeConfig import NodeConfig
+from Nodes.Core.ProducerNode import ProducerNode
+from Nodes.Core.BlockingNode import BlockingNode
+from Nodes.Core.NonBlockingNode import NonBlockingNode
 
 logger = structlog.get_logger(__name__)
 
@@ -30,7 +30,7 @@ class NodeFactory:
         """
         Auto-discover all node classes in the Nodes package.
         
-        Scans the Nodes package, imports all modules, and finds classes that inherit
+        Scans the Nodes package recursively, imports all modules, and finds classes that inherit
         from ProducerNode, BlockingNode, or NonBlockingNode. Builds a mapping from
         each class's identifier to the class itself.
         
@@ -48,32 +48,46 @@ class NodeFactory:
         
         discovered_classes = []
         
-        # Iterate through all modules in the Nodes package
-        for importer, modname, ispkg in pkgutil.iter_modules(nodes_package_path, nodes_package_name + "."):
-            if ispkg:
-                continue
-            
-            try:
-                # Import the module
-                module = importlib.import_module(modname)
-                
-                # Find all classes in the module
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-                    # Check if class is defined in this module (not imported)
-                    if obj.__module__ != modname:
+        # Recursively iterate through all modules and packages in the Nodes package
+        def walk_packages(path, prefix):
+            """Recursively walk through packages and modules."""
+            for importer, modname, ispkg in pkgutil.iter_modules(path, prefix):
+                if ispkg:
+                    # Recursively search subpackages
+                    try:
+                        subpackage = importlib.import_module(modname)
+                        if hasattr(subpackage, '__path__'):
+                            walk_packages(subpackage.__path__, modname + ".")
+                    except Exception as e:
+                        # Log but continue - some packages might fail to import
+                        # This could be due to missing __init__.py or other issues
+                        logger.debug(f"[NodeFactory] Failed to import package {modname}: {e}")
                         continue
-                    
-                    # Check if class inherits from one of our base node types
-                    if (issubclass(obj, ProducerNode) or 
-                        issubclass(obj, BlockingNode) or 
-                        issubclass(obj, NonBlockingNode)):
-                        # Exclude abstract base classes
-                        if obj not in cls._abstract_base_classes:
-                            discovered_classes.append(obj)
-            except Exception as e:
-                # Log but continue - some modules might fail to import
-                logger.warning(f"[NodeFactory] Warning: Failed to import module {modname}: {e}")
-                continue
+                else:
+                    # Import and search the module
+                    try:
+                        module = importlib.import_module(modname)
+                        
+                        # Find all classes in the module
+                        for name, obj in inspect.getmembers(module, inspect.isclass):
+                            # Check if class is defined in this module (not imported)
+                            if obj.__module__ != modname:
+                                continue
+                            
+                            # Check if class inherits from one of our base node types
+                            if (issubclass(obj, ProducerNode) or 
+                                issubclass(obj, BlockingNode) or 
+                                issubclass(obj, NonBlockingNode)):
+                                # Exclude abstract base classes
+                                if obj not in cls._abstract_base_classes:
+                                    discovered_classes.append(obj)
+                    except Exception as e:
+                        # Log but continue - some modules might fail to import
+                        logger.warning(f"[NodeFactory] Warning: Failed to import module {modname}: {e}")
+                        continue
+        
+        # Start recursive walk from the Nodes package
+        walk_packages(nodes_package_path, nodes_package_name + ".")
         
         # Build mapping from identifier to class
         mapping = {}

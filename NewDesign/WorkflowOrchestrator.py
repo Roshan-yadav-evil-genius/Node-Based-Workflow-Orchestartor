@@ -1,8 +1,8 @@
 import asyncio
 import structlog
 from typing import Dict, List, Any
-from Nodes.BaseNode import BaseNode
-from Nodes.NodeData import NodeData
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.NodeData import NodeData
 from LoopManager import LoopManager
 from DataStore import DataStore
 from WorkflowLoader import WorkflowLoader

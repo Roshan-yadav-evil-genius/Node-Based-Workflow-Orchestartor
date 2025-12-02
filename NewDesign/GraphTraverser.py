@@ -1,7 +1,7 @@
 import structlog
 from typing import Dict, List, Set, Tuple
-from Nodes.BaseNode import BaseNode
-from Nodes.NonBlockingNode import NonBlockingNode
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.NonBlockingNode import NonBlockingNode
 
 logger = structlog.get_logger(__name__)
 
