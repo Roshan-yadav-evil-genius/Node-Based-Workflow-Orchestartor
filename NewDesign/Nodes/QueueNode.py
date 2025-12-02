@@ -3,6 +3,9 @@ from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 from DataStore import DataStore
 import asyncio
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 class QueueNode(NonBlockingNode):
     @classmethod
@@ -27,6 +30,6 @@ class QueueNode(NonBlockingNode):
         
         # Push data to queue
         await data_store.push(queue_name, node_data)
-        print(f"[{self.config.node_name}] Pushed data to queue '{queue_name}': {node_data.payload}")
+        logger.info(f"[{self.config.node_name}] Pushed data to queue '{queue_name}': {node_data.payload}")
         
         return node_data

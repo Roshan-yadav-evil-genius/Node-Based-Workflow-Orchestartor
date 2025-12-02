@@ -1,4 +1,5 @@
 import asyncio
+import structlog
 from typing import List, Optional
 from Nodes.BaseNode import BaseNode
 from Nodes.ProducerNode import ProducerNode
@@ -6,6 +7,8 @@ from Nodes.BlockingNode import BlockingNode
 from Nodes.NonBlockingNode import NonBlockingNode
 from Nodes.NodeData import NodeData
 from Executor import Executor
+
+logger = structlog.get_logger(__name__)
 
 class LoopManager:
     """
@@ -20,7 +23,7 @@ class LoopManager:
 
     async def start(self):
         self.running = True
-        print(f"[LoopManager] Starting loop (each node executes in its preferred pool)")
+        logger.info("[LoopManager] Starting loop (each node executes in its preferred pool)")
         
         while self.running:
             try:
@@ -44,7 +47,7 @@ class LoopManager:
                         break
                         
             except Exception as e:
-                print(f"[LoopManager] Error in loop: {e}")
+                logger.exception("[LoopManager] Error in loop", error=str(e))
                 # In real impl, send to DLQ
                 await asyncio.sleep(1) # Prevent tight loop on error
 

@@ -2,8 +2,11 @@ from .ProducerNode import ProducerNode
 from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 import asyncio
+import structlog
 import uuid
 import random
+
+logger = structlog.get_logger(__name__)
 
 class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
     @classmethod
@@ -15,13 +18,13 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         return ExecutionPool.ASYNC
 
     async def execute(self, node_data: NodeData) -> NodeData:
-        print(f"[{self.config.node_name}] Monitoring freelance jobs...")
+        logger.info(f"[{self.config.node_name}] Monitoring freelance jobs...")
         await asyncio.sleep(0.5) # Simulate delay
         
         # Simulate finding a job
         job_id = str(uuid.uuid4())
         job_title = random.choice(["Python Developer", "React Developer", "Data Scientist", "Java Engineer"])
-        print(f"[{self.config.node_name}] Found job: {job_title}")
+        logger.info(f"[{self.config.node_name}] Found job: {job_title}")
         
         return NodeData(
             id=job_id,

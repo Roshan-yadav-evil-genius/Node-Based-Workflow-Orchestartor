@@ -3,7 +3,10 @@ from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 from DataStore import DataStore
 import asyncio
+import structlog
 import uuid
+
+logger = structlog.get_logger(__name__)
 
 class QueueReader(ProducerNode):
     @classmethod
@@ -29,12 +32,12 @@ class QueueReader(ProducerNode):
         timeout = config_dict.get("timeout", 5.0)  # Default 5 seconds
         
         # Pop data from queue
-        print(f"[{self.config.node_name}] Reading data from queue '{queue_name}' (timeout: {timeout}s)...")
+        logger.info(f"[{self.config.node_name}] Reading data from queue '{queue_name}' (timeout: {timeout}s)...")
         result = await data_store.pop(queue_name, timeout)
         
         if result is None:
             # Timeout occurred - return empty data to allow loop to continue
-            print(f"[{self.config.node_name}] Timeout waiting for data from queue '{queue_name}'")
+            logger.warning(f"[{self.config.node_name}] Timeout waiting for data from queue '{queue_name}'")
             return NodeData(
                 id=str(uuid.uuid4()),
                 payload={},
@@ -42,5 +45,5 @@ class QueueReader(ProducerNode):
             )
         
         # Return the data from queue
-        print(f"[{self.config.node_name}] Received data from queue '{queue_name}': {result}")
+        logger.info(f"[{self.config.node_name}] Received data from queue '{queue_name}': {result}")
         return result

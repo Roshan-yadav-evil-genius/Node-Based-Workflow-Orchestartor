@@ -2,6 +2,9 @@ from .ProducerNode import ProducerNode
 from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 import asyncio
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 class StoreReader(ProducerNode):
     @classmethod
@@ -13,6 +16,6 @@ class StoreReader(ProducerNode):
         return ExecutionPool.ASYNC
 
     async def execute(self, node_data: NodeData) -> NodeData:
-        print(f"[{self.config.node_name}] Reading job from store...")
+        logger.info(f"[{self.config.node_name}] Reading job from store...")
         await asyncio.sleep(0.1)
         return node_data

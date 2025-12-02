@@ -2,6 +2,9 @@ from .BlockingNode import BlockingNode
 from .NodeData import NodeData
 from .ExecutionPool import ExecutionPool
 import asyncio
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 class IfPythonJob(BlockingNode):
     @classmethod
@@ -13,7 +16,7 @@ class IfPythonJob(BlockingNode):
         return ExecutionPool.ASYNC
 
     async def execute(self, node_data: NodeData) -> NodeData:
-        print(f"[{self.config.node_name}] Checking if job is Python related...")
+        logger.info(f"[{self.config.node_name}] Checking if job is Python related...")
         await asyncio.sleep(0.1)
         
         title = node_data.payload.get("job_title", "").lower()
@@ -22,6 +25,6 @@ class IfPythonJob(BlockingNode):
         # In a real graph, we would handle conditional edges here.
         # For this simulation, we'll just add a flag to metadata.
         node_data.metadata["is_python"] = is_python
-        print(f"[{self.config.node_name}] Is Python? {is_python}")
+        logger.info(f"[{self.config.node_name}] Is Python? {is_python}")
         
         return node_data

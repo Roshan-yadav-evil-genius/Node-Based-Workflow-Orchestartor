@@ -1,5 +1,8 @@
 import asyncio
+import structlog
 from typing import Any, Dict, Optional
+
+logger = structlog.get_logger(__name__)
 
 class DataStore:
     """
@@ -84,7 +87,7 @@ class DataStore:
         """
         queue = await self.get_queue(queue_name)
         await queue.put(data)
-        print(f"[DataStore] Pushed to '{queue_name}': {data}")
+        logger.info(f"[DataStore] Pushed to '{queue_name}': {data}")
 
     async def pop(self, queue_name: str, timeout: Optional[float] = None) -> Any:
         """

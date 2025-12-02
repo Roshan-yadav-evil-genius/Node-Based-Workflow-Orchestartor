@@ -1,3 +1,4 @@
+import structlog
 from typing import Optional, Dict, Type
 import pkgutil
 import importlib
@@ -7,6 +8,8 @@ from Nodes.NodeConfig import NodeConfig
 from Nodes.ProducerNode import ProducerNode
 from Nodes.BlockingNode import BlockingNode
 from Nodes.NonBlockingNode import NonBlockingNode
+
+logger = structlog.get_logger(__name__)
 
 
 class NodeFactory:
@@ -69,7 +72,7 @@ class NodeFactory:
                             discovered_classes.append(obj)
             except Exception as e:
                 # Log but continue - some modules might fail to import
-                print(f"[NodeFactory] Warning: Failed to import module {modname}: {e}")
+                logger.warning(f"[NodeFactory] Warning: Failed to import module {modname}: {e}")
                 continue
         
         # Build mapping from identifier to class
@@ -87,7 +90,7 @@ class NodeFactory:
                 
                 mapping[identifier] = node_class
             except Exception as e:
-                print(f"[NodeFactory] Warning: Failed to get identifier from {node_class.__name__}: {e}")
+                logger.warning(f"[NodeFactory] Warning: Failed to get identifier from {node_class.__name__}: {e}")
                 continue
         
         # Validate uniqueness
@@ -100,7 +103,7 @@ class NodeFactory:
                 error_msg += f"  '{ident}': {', '.join(class_names)}\n"
             raise ValueError(error_msg)
         
-        print(f"[NodeFactory] Auto-discovered {len(mapping)} node classes")
+        logger.info(f"[NodeFactory] Auto-discovered {len(mapping)} node classes")
         return mapping
     
     @classmethod
@@ -131,5 +134,5 @@ class NodeFactory:
         if node_cls:
             return node_cls(config)
         
-        print(f"[NodeFactory] Warning: Unknown node type '{node_type}'")
+        logger.warning(f"[NodeFactory] Warning: Unknown node type '{node_type}'")
         return None

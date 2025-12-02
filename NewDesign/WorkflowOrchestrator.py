@@ -1,4 +1,5 @@
 import asyncio
+import structlog
 from typing import Dict, List, Any
 from Nodes.BaseNode import BaseNode
 from Nodes.NodeData import NodeData
@@ -6,7 +7,8 @@ from LoopManager import LoopManager
 from DataStore import DataStore
 from WorkflowLoader import WorkflowLoader
 from GraphTraverser import GraphTraverser
-from rich import print
+
+logger = structlog.get_logger(__name__)
 
 class WorkflowOrchestrator:
     """
@@ -37,10 +39,10 @@ class WorkflowOrchestrator:
         """
         Start all loops.
         """
-        print("[Orchestrator] Starting Production Mode...")
+        logger.info("[Orchestrator] Starting Production Mode...")
         tasks = [manager.start() for manager in self.loop_managers]
         if not tasks:
-            print("[Orchestrator] No loops to run.")
+            logger.info("[Orchestrator] No loops to run.")
             return
         await asyncio.gather(*tasks)
 
@@ -48,7 +50,7 @@ class WorkflowOrchestrator:
         """
         Execute a single node directly (Development Mode).
         """
-        print(f"[Orchestrator] Development Mode: Executing node {node_id}")
+        logger.info(f"[Orchestrator] Development Mode: Executing node {node_id}")
         node = self.nodes.get(node_id)
         if not node:
             raise ValueError(f"Node {node_id} not found")
@@ -62,7 +64,7 @@ class WorkflowOrchestrator:
         Load workflow from JSON definition.
         Delegates to WorkflowLoader and GraphTraverser following SRP.
         """
-        print("[Orchestrator] Loading workflow...")
+        logger.info("[Orchestrator] Loading workflow...")
         
         # Delegate workflow loading to WorkflowLoader
         workflow_graph = self.workflow_loader.load_workflow(workflow_json)
@@ -73,13 +75,13 @@ class WorkflowOrchestrator:
         # Delegate graph traversal to GraphTraverser
         graph_traverser = GraphTraverser(workflow_graph.nodes)
         loops = graph_traverser.find_loops(workflow_graph.edge_map, workflow_graph.producer_nodes)
-        print("Loops: ", loops)
+        logger.debug(f"Loops: {loops}")
         # Create loops from traversal results
         for producer_id, chain_ids, branch_info in loops:
             if chain_ids:
                 self.create_loop(producer_id, chain_ids)
                 self.loop_branches[producer_id] = branch_info
-                print(f"[Orchestrator] Created loop starting at {producer_id} with chain: {chain_ids}")
+                logger.info(f"[Orchestrator] Created loop starting at {producer_id} with chain: {chain_ids}")
             else:
-                print(f"[Orchestrator] Warning: No chain found for ProducerNode {producer_id}")
+                logger.warning(f"[Orchestrator] Warning: No chain found for ProducerNode {producer_id}")
 

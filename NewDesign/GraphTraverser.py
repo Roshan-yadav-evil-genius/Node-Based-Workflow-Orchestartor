@@ -1,7 +1,9 @@
+import structlog
 from typing import Dict, List, Set, Tuple
 from Nodes.BaseNode import BaseNode
 from Nodes.NonBlockingNode import NonBlockingNode
-from rich import print
+
+logger = structlog.get_logger(__name__)
 
 class GraphTraverser:
     """
@@ -108,12 +110,12 @@ class GraphTraverser:
                 
                 # Check if we've already visited this node (cycle detection)
                 if next_id in visited:
-                    print(f"[GraphTraverser] Warning: Cycle detected at node {next_id}, stopping traversal")
+                    logger.warning(f"[GraphTraverser] Warning: Cycle detected at node {next_id}, stopping traversal")
                     break
                 
                 # Check if node exists
                 if next_id not in self.nodes:
-                    print(f"[GraphTraverser] Warning: Node {next_id} referenced in edges but not found")
+                    logger.warning(f"[GraphTraverser] Warning: Node {next_id} referenced in edges but not found")
                     break
                 
                 # Add to chain
@@ -150,12 +152,12 @@ class GraphTraverser:
         while current_id:
             # Check if node exists
             if current_id not in self.nodes:
-                print(f"[GraphTraverser] Warning: Node {current_id} referenced in edges but not found")
+                logger.warning(f"[GraphTraverser] Warning: Node {current_id} referenced in edges but not found")
                 break
             
             # Check for cycles
             if current_id in visited:
-                print(f"[GraphTraverser] Warning: Cycle detected at node {current_id} in branch")
+                logger.warning(f"[GraphTraverser] Warning: Cycle detected at node {current_id} in branch")
                 break
             
             # Add to branch chain
