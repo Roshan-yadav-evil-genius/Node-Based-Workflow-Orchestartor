@@ -70,11 +70,11 @@ class WorkflowOrchestrator:
         workflow_graph = self.workflow_loader.load_workflow(workflow_json)
         
         # Store nodes in orchestrator for access
-        self.nodes = workflow_graph.nodes
+        self.nodes = workflow_graph.base_nodes
         
         # Delegate graph traversal to GraphTraverser
-        graph_traverser = GraphTraverser(workflow_graph.nodes)
-        loops = graph_traverser.find_loops(workflow_graph.edge_map, workflow_graph.producer_nodes)
+        graph_traverser = GraphTraverser(workflow_graph.base_nodes)
+        loops = graph_traverser.find_loops(workflow_graph.get_edge_map(), workflow_graph.producer_node_ids)
         logger.debug(f"Loops: {loops}")
         # Create loops from traversal results
         for producer_id, chain_ids, branch_info in loops:
