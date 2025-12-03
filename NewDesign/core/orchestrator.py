@@ -73,8 +73,8 @@ class WorkflowOrchestrator:
         self.nodes = workflow_graph.base_nodes
         
         # Delegate graph traversal to GraphTraverser
-        graph_traverser = GraphTraverser(workflow_graph.base_nodes)
-        loops = graph_traverser.find_loops(workflow_graph.get_edge_map(), workflow_graph.producer_node_ids)
+        graph_traverser = GraphTraverser(workflow_graph)
+        loops = graph_traverser.find_loops()
         logger.debug(f"Loops: {loops}")
         # Create loops from traversal results
         for producer_id, chain_ids, branch_info in loops:
