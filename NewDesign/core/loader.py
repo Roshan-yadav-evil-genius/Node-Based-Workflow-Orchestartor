@@ -1,7 +1,11 @@
 import structlog
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Tuple
+from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.NodeConfig import NodeConfig
 from core.graph import WorkflowGraph
-from core.node_builder import NodeBuilder
+from core.node_factory import NodeFactory
+from core.utils import BranchKeyNormalizer
+from core.workflow_node import WorkflowNode
 
 logger = structlog.get_logger(__name__)
 
@@ -14,7 +18,7 @@ class WorkflowLoader:
     def __init__(self):
         """Initialize WorkflowLoader with a new WorkflowGraph instance."""
         self.workflow_graph = WorkflowGraph()
-        self.node_builder = NodeBuilder()
+        self.node_factory = NodeFactory()
     
     def load_workflow(self, workflow_json: Dict[str, Any]) -> WorkflowGraph:
         """
@@ -54,8 +58,8 @@ class WorkflowLoader:
         """
         for node_def in nodes:
             try:
-                # Build node using NodeBuilder
-                result = self.node_builder.build_node(node_def)
+                # Build node directly (merged from NodeBuilder)
+                result = self._build_node(node_def)
                 if result:
                     workflow_node, base_node = result
                     self.workflow_graph.add_node(workflow_node, base_node)
@@ -64,6 +68,39 @@ class WorkflowLoader:
                     logger.warning(f"[WorkflowLoader] Node {node_def.get('id')} of type {node_def.get('type')} could not be instantiated")
             except ValueError as e:
                 logger.warning(f"[WorkflowLoader] Could not add node: {e}")
+    
+    def _build_node(self, node_def: Dict[str, Any]) -> Optional[Tuple[WorkflowNode, BaseNode]]:
+        """
+        Build WorkflowNode and BaseNode from node definition.
+        
+        Args:
+            node_def: Dictionary containing node definition with keys: id, type, data
+            
+        Returns:
+            Tuple of (WorkflowNode, BaseNode) if successful, None otherwise
+        """
+        node_id = node_def["id"]
+        node_type = node_def["type"]
+        node_data = node_def.get("data", {})
+        
+        # Extract config data
+        config_data = node_data.get("config", {})
+        config_data["node_id"] = node_id
+        config_data["node_name"] = node_id  # Use ID as name for now
+        
+        # Create NodeConfig
+        config = NodeConfig(**config_data)
+        
+        # Create BaseNode instance using factory
+        base_node = self.node_factory.create_node(node_type, config)
+        
+        if not base_node:
+            return None
+        
+        # Create WorkflowNode instance
+        workflow_node = WorkflowNode(id=node_id)
+        
+        return (workflow_node, base_node)
     
     def _connect_nodes(self, edges: List[Dict[str, Any]]):
         """
@@ -78,26 +115,12 @@ class WorkflowLoader:
             source_handle = edge.get("sourceHandle")
             
             if source and target:
-                key = self._normalize_edge_key(source_handle)
+                key = BranchKeyNormalizer.normalize_to_lowercase(source_handle)
                 
                 try:
                     self.workflow_graph.connect_nodes(source, target, key)
                 except ValueError as e:
                     logger.warning(f"[WorkflowLoader] Could not connect {source} -> {target}: {e}")
-    
-    def _normalize_edge_key(self, source_handle: Any) -> str:
-        """
-        Normalize edge key from sourceHandle to lowercase format.
-        
-        Args:
-            source_handle: Source handle value (Yes/No label or null)
-            
-        Returns:
-            Normalized key string ("yes", "no", or "default")
-        """
-        if source_handle:
-            return source_handle.lower()
-        return "default"
     
     def _log_producer_nodes(self):
         """

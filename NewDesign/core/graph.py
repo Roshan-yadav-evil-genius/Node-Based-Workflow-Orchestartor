@@ -170,34 +170,3 @@ class WorkflowGraph:
         """
         return self.base_nodes.get(node_id)
 
-    def get_edge_map(self) -> Dict[str, List[Dict[str, str]]]:
-        """
-        Get edge_map representation for backward compatibility.
-        
-        Returns:
-            Dictionary mapping source node IDs to list of edge dictionaries with target and label
-        """
-        edge_map: Dict[str, List[Dict[str, str]]] = {}
-        
-        for node_id, node in self.node_map.items():
-            if node.next:
-                edges = []
-                for key, next_node in node.next.items():
-                    # Convert lowercase keys back to capitalized format for backward compatibility
-                    if key == "default":
-                        label = None
-                    elif key == "yes":
-                        label = "Yes"
-                    elif key == "no":
-                        label = "No"
-                    else:
-                        label = key  # Keep other keys as-is
-                    
-                    edges.append({
-                        "target": next_node.id,
-                        "label": label
-                    })
-                if edges:
-                    edge_map[node_id] = edges
-        
-        return edge_map

@@ -1,7 +1,8 @@
 import structlog
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional
 from Nodes.Core.NonBlockingNode import NonBlockingNode
 from core.graph import WorkflowGraph
+from core.utils import BranchKeyNormalizer
 
 logger = structlog.get_logger(__name__)
 
@@ -75,14 +76,7 @@ class GraphTraverser:
                     branch_target = next_workflow_node.id
                     
                     # Convert lowercase keys back to capitalized format for backward compatibility
-                    if branch_key == "default":
-                        branch_label = None
-                    elif branch_key == "yes":
-                        branch_label = "Yes"
-                    elif branch_key == "no":
-                        branch_label = "No"
-                    else:
-                        branch_label = branch_key
+                    branch_label = BranchKeyNormalizer.normalize_to_capitalized(branch_key)
                     
                     # Traverse this branch with a fresh visited set for this branch
                     branch_chain = self._traverse_branch(
@@ -116,24 +110,12 @@ class GraphTraverser:
                 next_workflow_node = list(next_nodes.values())[0]
                 next_id = next_workflow_node.id
                 
-                # Check if we've already visited this node (cycle detection)
-                if next_id in visited:
-                    logger.warning(f"[GraphTraverser] Warning: Cycle detected at node {next_id}, stopping traversal")
+                # Validate and process next node
+                if not self._validate_and_add_node(next_id, visited, chain_ids):
                     break
-                
-                # Check if node exists
-                if not self.workflow_graph.get_node(next_id):
-                    logger.warning(f"[GraphTraverser] Warning: Node {next_id} referenced in edges but not found")
-                    break
-                
-                # Add to chain
-                chain_ids.append(next_id)
-                visited.add(next_id)
                 
                 # Check if this is a NonBlockingNode (marks loop end)
-                next_base_node = self.workflow_graph.get_base_node(next_id)
-                if next_base_node and isinstance(next_base_node, NonBlockingNode):
-                    # Found loop end marker
+                if self._is_non_blocking_node(next_id):
                     break
                 
                 # Continue to next node
@@ -157,25 +139,12 @@ class GraphTraverser:
         current_id = start_id
         
         while current_id:
-            # Check if node exists
-            current_node = self.workflow_graph.get_node(current_id)
-            if not current_node:
-                logger.warning(f"[GraphTraverser] Warning: Node {current_id} referenced in edges but not found")
+            # Validate and process current node
+            if not self._validate_and_add_node(current_id, visited, branch_chain):
                 break
-            
-            # Check for cycles
-            if current_id in visited:
-                logger.warning(f"[GraphTraverser] Warning: Cycle detected at node {current_id} in branch")
-                break
-            
-            # Add to branch chain
-            branch_chain.append(current_id)
-            visited.add(current_id)
             
             # Check if this is a NonBlockingNode (marks branch end)
-            current_base_node = self.workflow_graph.get_base_node(current_id)
-            if current_base_node and isinstance(current_base_node, NonBlockingNode):
-                # Found branch end marker
+            if self._is_non_blocking_node(current_id):
                 break
             
             # Get next nodes using the linked structure
@@ -190,10 +159,11 @@ class GraphTraverser:
                 sub_branch_visited = visited.copy()
                 for branch_key, next_workflow_node in next_nodes.items():
                     branch_target = next_workflow_node.id
+                    sub_branch_label = BranchKeyNormalizer.normalize_to_capitalized(branch_key)
                     sub_branch_chain = self._traverse_branch(
                         branch_target,
                         sub_branch_visited.copy(),
-                        branch_key if branch_key != "default" else None
+                        sub_branch_label
                     )
                     # Add nodes maintaining order
                     for node_id in sub_branch_chain:
@@ -206,3 +176,43 @@ class GraphTraverser:
                 current_id = list(next_nodes.values())[0].id
         
         return branch_chain
+    
+    def _validate_and_add_node(self, node_id: str, visited: Set[str], chain: List[str]) -> bool:
+        """
+        Validate node existence, check for cycles, and add to chain.
+        
+        Args:
+            node_id: ID of the node to validate and add
+            visited: Set of already visited node IDs
+            chain: List to add the node ID to
+            
+        Returns:
+            True if node was successfully added, False if validation failed
+        """
+        # Check if node exists
+        if not self.workflow_graph.get_node(node_id):
+            logger.warning(f"[GraphTraverser] Warning: Node {node_id} referenced in edges but not found")
+            return False
+        
+        # Check for cycles
+        if node_id in visited:
+            logger.warning(f"[GraphTraverser] Warning: Cycle detected at node {node_id}, stopping traversal")
+            return False
+        
+        # Add to chain
+        chain.append(node_id)
+        visited.add(node_id)
+        return True
+    
+    def _is_non_blocking_node(self, node_id: str) -> bool:
+        """
+        Check if a node is a NonBlockingNode.
+        
+        Args:
+            node_id: ID of the node to check
+            
+        Returns:
+            True if the node is a NonBlockingNode, False otherwise
+        """
+        base_node = self.workflow_graph.get_base_node(node_id)
+        return base_node is not None and isinstance(base_node, NonBlockingNode)
