@@ -1,7 +1,7 @@
 import structlog
 from typing import Dict, List, Any
 from core.graph import WorkflowGraph
-from rich import print
+from core.node_builder import NodeBuilder
 
 logger = structlog.get_logger(__name__)
 
@@ -14,6 +14,7 @@ class WorkflowLoader:
     def __init__(self):
         """Initialize WorkflowLoader with a new WorkflowGraph instance."""
         self.workflow_graph = WorkflowGraph()
+        self.node_builder = NodeBuilder()
     
     def load_workflow(self, workflow_json: Dict[str, Any]) -> WorkflowGraph:
         """
@@ -53,7 +54,14 @@ class WorkflowLoader:
         """
         for node_def in nodes:
             try:
-                self.workflow_graph.add_node(node_def)
+                # Build node using NodeBuilder
+                result = self.node_builder.build_node(node_def)
+                if result:
+                    workflow_node, base_node = result
+                    self.workflow_graph.add_node(workflow_node, base_node)
+                    logger.info(f"[WorkflowLoader] Registered node: {workflow_node.id} of type {base_node.__class__.__name__}")
+                else:
+                    logger.warning(f"[WorkflowLoader] Node {node_def.get('id')} of type {node_def.get('type')} could not be instantiated")
             except ValueError as e:
                 logger.warning(f"[WorkflowLoader] Could not add node: {e}")
     

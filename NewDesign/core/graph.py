@@ -1,52 +1,8 @@
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.NodeConfig import NodeConfig
 from Nodes.Core.ProducerNode import ProducerNode
 from Nodes.Core.NonBlockingNode import NonBlockingNode
-from core.node_factory import NodeFactory
-import structlog
-
-logger = structlog.get_logger(__name__)
-
-
-@dataclass
-class WorkflowNode:
-    id: str
-    next: Dict[str, "WorkflowNode"] = field(default_factory=dict)
-
-    def add_next(self, node: "WorkflowNode", key: str = "default"):
-        self.next[key] = node
-    
-    def to_dict(self, visited: Optional[set] = None) -> Dict[str, Any]:
-        """
-        Convert WorkflowNode to dictionary for serialization.
-        Handles recursive references by tracking visited nodes.
-        
-        Args:
-            visited: Set of visited node IDs to prevent infinite recursion
-            
-        Returns:
-            Dictionary representation of the WorkflowNode
-        """
-        if visited is None:
-            visited = set()
-        
-        # Prevent infinite recursion in circular graphs
-        if self.id in visited:
-            return {"id": self.id, "next": {}, "_circular_reference": True}
-        
-        visited.add(self.id)
-        
-        # Serialize next nodes recursively
-        next_dict = {}
-        for key, next_node in self.next.items():
-            next_dict[key] = next_node.to_dict(visited.copy())
-        
-        return {
-            "id": self.id,
-            "next": next_dict
-        }
+from core.workflow_node import WorkflowNode
 
 
 class WorkflowGraph:
@@ -58,66 +14,39 @@ class WorkflowGraph:
     def __init__(self):
         self.node_map: Dict[str, WorkflowNode] = {}  # Linked graph structure for traversal
         self.base_nodes: Dict[str, BaseNode] = {}  # Executable node instances (for execution)
-        self.node_factory: NodeFactory = NodeFactory()
 
-    def add_node(self, node_def: Dict[str, Any]):
+    def add_node(self, workflow_node: WorkflowNode, base_node: BaseNode):
         """
-        Add a node to the graph from a node definition dictionary.
-        Handles all processing, initialization, and creation of WorkflowNode and BaseNode.
+        Add a node to the graph.
         
         Args:
-            node_def: Dictionary containing node definition with keys: id, type, data
+            workflow_node: WorkflowNode instance to add
+            base_node: BaseNode instance for execution
         """
-        node_id = node_def["id"]
-        node_type = node_def["type"]
-        node_data = node_def.get("data", {})
+        if workflow_node.id in self.node_map:
+            raise ValueError(f"Node with id '{workflow_node.id}' already exists in the graph")
         
-        if node_id in self.node_map:
-            raise ValueError(f"Node with id '{node_id}' already exists in the graph")
-        
-        # Extract config data
-        config_data = node_data.get("config", {})
-        config_data["node_id"] = node_id
-        config_data["node_name"] = node_id  # Use ID as name for now
-        
-        # Create NodeConfig
-        config = NodeConfig(**config_data)
-        
-        # Create BaseNode instance using factory
-        node_instance = self.node_factory.create_node(node_type, config)
-        
+        self.node_map[workflow_node.id] = workflow_node
+        self.base_nodes[workflow_node.id] = base_node
 
-        
-        # Add BaseNode if created successfully
-        if node_instance:
-            self.node_map[node_id] = WorkflowNode(id=node_id)
-            self.base_nodes[node_id] = node_instance
-
-            logger.info(f"[WorkflowGraph] Registered node: {node_id} of type {node_instance.__class__.__name__}({node_type})")
-        else:
-            logger.warning(f"[WorkflowGraph] Node {node_id} of type {node_type} could not be instantiated")
-
-    def add_node_at_end_of(self, node_id: str, node_def: Dict[str, Any], key: str = "default"):
+    def add_node_at_end_of(self, node_id: str, workflow_node: WorkflowNode, base_node: BaseNode, key: str = "default"):
         """
         Add a node at the end of a specific node.
         
         Args:
             node_id: ID of the node to add after
-            node_def: Dictionary containing node definition with keys: id, type, data
+            workflow_node: WorkflowNode instance to add
+            base_node: BaseNode instance for execution
             key: Key to use for the connection (default: "default")
         """
         if node_id not in self.node_map:
             raise ValueError(f"Node with id '{node_id}' not found in the graph")
         
-        # Add the new node first (this will create both WorkflowNode and BaseNode)
-        self.add_node(node_def)
-        
-        # Get the newly created WorkflowNode
-        new_node_id = node_def["id"]
-        new_node = self.node_map[new_node_id]
+        # Add the new node first
+        self.add_node(workflow_node, base_node)
         
         # Connect it to the specified node
-        self.node_map[node_id].add_next(new_node, key)
+        self.node_map[node_id].add_next(workflow_node, key)
 
     def connect_nodes(self, from_id: str, to_id: str, key: str = "default"):
         """
