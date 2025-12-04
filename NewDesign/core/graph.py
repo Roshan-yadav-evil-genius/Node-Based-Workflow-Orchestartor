@@ -1,7 +1,10 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Set
+import structlog
 from Nodes.Core.BaseNode import BaseNode
 from Nodes.Core.BaseNode import ProducerNode, NonBlockingNode
 from core.workflow_node import WorkflowNode
+
+logger = structlog.get_logger(__name__)
 
 
 class WorkflowGraph:
@@ -165,4 +168,185 @@ class WorkflowGraph:
         """
         workflow_node = self.node_map.get(node_id)
         return workflow_node.instance if workflow_node else None
+
+    def find_loops(self) -> List[Tuple[WorkflowNode, WorkflowNode]]:
+        """
+        Find all loops starting from ProducerNodes.
+        
+        Returns:
+            List of tuples: (starting_producer_workflow_node, ending_non_blocking_workflow_node) for each loop
+        """
+        loops = []
+        for producer_node in self.get_producer_nodes():
+            ending_node = self._find_ending_node_from_producer(producer_node)
+            if ending_node:
+                loops.append((producer_node, ending_node))
+            else:
+                logger.warning(f"[WorkflowGraph] No ending NonBlockingNode found for producer {producer_node.id}")
+        return loops
+
+    def _find_ending_node_from_producer(self, producer_node: WorkflowNode) -> Optional[WorkflowNode]:
+        """
+        Traverse from a producer WorkflowNode until a NonBlockingNode is reached.
+        Handles conditional branches by following all paths until NonBlockingNode is found.
+        
+        Args:
+            producer_node: Producer WorkflowNode to start traversal from
+            
+        Returns:
+            Ending NonBlockingNode WorkflowNode, or None if not found
+        """
+        visited: Set[str] = set()
+        return self._traverse_to_ending_node(producer_node, visited)
+
+    def _traverse_to_ending_node(self, current_node: WorkflowNode, visited: Set[str]) -> Optional[WorkflowNode]:
+        """
+        Recursively traverse from current node to find ending NonBlockingNode.
+        Handles branching by checking all paths.
+        
+        Args:
+            current_node: Current WorkflowNode to check
+            visited: Set of visited node IDs to prevent cycles
+            
+        Returns:
+            NonBlockingNode WorkflowNode if found, None otherwise
+        """
+        # Check if current node is NonBlockingNode first (before cycle check)
+        if self._is_non_blocking_node(current_node):
+            return current_node
+        
+        # Check for cycles
+        if current_node.id in visited:
+            logger.warning(f"[WorkflowGraph] Cycle detected at node {current_node.id}, stopping traversal")
+            return None
+        
+        visited.add(current_node.id)
+        
+        # Get all next nodes
+        next_nodes = current_node.next
+        if not next_nodes:
+            return None
+        
+        # If multiple branches, check all of them
+        for next_workflow_node in next_nodes.values():
+            ending_node = self._traverse_to_ending_node(next_workflow_node, visited.copy())
+            if ending_node:
+                return ending_node
+        
+        return None
+
+    def _is_non_blocking_node(self, workflow_node: WorkflowNode) -> bool:
+        """
+        Check if a WorkflowNode's instance is a NonBlockingNode.
+        
+        Args:
+            workflow_node: WorkflowNode to check
+            
+        Returns:
+            True if the node is a NonBlockingNode, False otherwise
+        """
+        return isinstance(workflow_node.instance, NonBlockingNode)
+
+    def build_chain_from_start_to_end(self, start_node: WorkflowNode, end_node: WorkflowNode) -> List[BaseNode]:
+        """
+        Build a chain of BaseNode instances from start to end WorkflowNode.
+        Traverses the graph following next connections, collecting all nodes until end is reached.
+        Handles branches by collecting nodes from all paths.
+        
+        Args:
+            start_node: Starting WorkflowNode (producer)
+            end_node: Ending WorkflowNode (NonBlockingNode)
+            
+        Returns:
+            List of BaseNode instances from start to end (excluding start, including end)
+        """
+        chain: List[BaseNode] = []
+        visited: Set[str] = {start_node.id}
+        current = start_node
+        
+        while current and current.id != end_node.id:
+            next_nodes = current.next
+            if not next_nodes:
+                break
+            
+            # If multiple branches, collect from all branches
+            if len(next_nodes) > 1:
+                all_branch_nodes: Set[str] = set()
+                for next_workflow_node in next_nodes.values():
+                    branch_chain = self._traverse_branch_to_end(next_workflow_node, end_node, visited.copy())
+                    for node_id in branch_chain:
+                        all_branch_nodes.add(node_id)
+                        visited.add(node_id)
+                
+                # Add all branch nodes to chain
+                for node_id in all_branch_nodes:
+                    node = self.get_node(node_id)
+                    if node and node.instance not in chain:
+                        chain.append(node.instance)
+                
+                # After processing branches, we should have reached end
+                break
+            else:
+                # Single edge - follow normally
+                next_workflow_node = list(next_nodes.values())[0]
+                
+                # Check if this is the end node
+                if next_workflow_node.id == end_node.id:
+                    chain.append(next_workflow_node.instance)
+                    break
+                
+                # Check for cycles
+                if next_workflow_node.id in visited:
+                    logger.warning(f"[WorkflowGraph] Cycle detected at node {next_workflow_node.id}")
+                    break
+                
+                visited.add(next_workflow_node.id)
+                chain.append(next_workflow_node.instance)
+                current = next_workflow_node
+        
+        return chain
+
+    def _traverse_branch_to_end(self, start_node: WorkflowNode, end_node: WorkflowNode, visited: Set[str]) -> List[str]:
+        """
+        Traverse a branch from start node until end node is reached.
+        
+        Args:
+            start_node: Starting WorkflowNode
+            end_node: Target ending WorkflowNode
+            visited: Set of visited node IDs
+            
+        Returns:
+            List of node IDs in this branch path
+        """
+        branch_chain: List[str] = []
+        current = start_node
+        
+        while current:
+            # Check if we reached the end
+            if current.id == end_node.id:
+                branch_chain.append(current.id)
+                break
+            
+            # Check for cycles
+            if current.id in visited:
+                break
+            
+            visited.add(current.id)
+            branch_chain.append(current.id)
+            
+            # Get next nodes
+            next_nodes = current.next
+            if not next_nodes:
+                break
+            
+            # If multiple edges, recursively traverse all branches
+            if len(next_nodes) > 1:
+                for next_workflow_node in next_nodes.values():
+                    sub_branch = self._traverse_branch_to_end(next_workflow_node, end_node, visited.copy())
+                    branch_chain.extend(sub_branch)
+                break
+            else:
+                current = list(next_nodes.values())[0]
+        
+        return branch_chain
 

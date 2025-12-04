@@ -3,10 +3,10 @@ import structlog
 from typing import Dict, List, Any
 from Nodes.Core.BaseNode import BaseNode
 from Nodes.Core.Data import NodeOutput
+from core.graph import WorkflowGraph
 from execution.loop_manager import LoopManager
 from storage.data_store import DataStore
 from core.loader import WorkflowLoader
-from core.traverser import GraphTraverser
 
 logger = structlog.get_logger(__name__)
 
@@ -18,19 +18,22 @@ class WorkflowOrchestrator:
     def __init__(self):
         self.data_store = DataStore.set_shared_instance(DataStore())
         self.loop_managers: List[LoopManager] = []
-        self.nodes: Dict[str, BaseNode] = {}  # Map of all nodes by ID
-        self.loop_branches: Dict[str, Dict[str, List[str]]] = {}  # producer_id -> {branch_label: [node_ids]}
         self.workflow_loader = WorkflowLoader()
+        self.workflow_graph = WorkflowGraph()
 
-    def register_node(self, node: BaseNode):
-        self.nodes[node.config.id] = node
-
-    def create_loop(self, producer_id: str, chain_ids: List[str]):
-        producer = self.nodes.get(producer_id)
-        chain = [self.nodes.get(nid) for nid in chain_ids]
+    def create_loop(self, start_workflow_node, end_workflow_node):
+        """
+        Create a loop from starting producer WorkflowNode to ending NonBlockingNode WorkflowNode.
         
-        if not producer or any(n is None for n in chain):
-            raise ValueError("Invalid node IDs provided for loop creation")
+        Args:
+            start_workflow_node: Starting producer WorkflowNode
+            end_workflow_node: Ending NonBlockingNode WorkflowNode
+        """
+        producer = start_workflow_node.instance
+        chain = self.workflow_graph.build_chain_from_start_to_end(start_workflow_node, end_workflow_node)
+        
+        if not producer or not chain:
+            raise ValueError(f"Invalid loop: producer or chain is empty for producer {start_workflow_node.id}")
             
         manager = LoopManager(producer, chain)
         self.loop_managers.append(manager)
@@ -62,25 +65,24 @@ class WorkflowOrchestrator:
     def load_workflow(self, workflow_json: Dict[str, Any]):
         """
         Load workflow from JSON definition.
-        Delegates to WorkflowLoader and GraphTraverser following SRP.
+        Delegates to WorkflowLoader and uses WorkflowGraph for traversal.
         """
         logger.info("[Orchestrator] Loading workflow...")
         
         # Delegate workflow loading to WorkflowLoader
-        workflow_graph = self.workflow_loader.load_workflow(workflow_json)
+        self.workflow_graph = self.workflow_loader.load_workflow(workflow_json)
         
         # Store nodes in orchestrator for access
-        self.nodes = {node_id: workflow_node.instance for node_id, workflow_node in workflow_graph.node_map.items()}
+        self.nodes = {node_id: workflow_node.instance for node_id, workflow_node in self.workflow_graph.node_map.items()}
         
-        # Delegate graph traversal to GraphTraverser
-        graph_traverser = GraphTraverser(workflow_graph)
-        loops = graph_traverser.find_loops()
-        logger.debug(f"Loops: {loops}")
+        # Find loops using WorkflowGraph
+        loops = self.workflow_graph.find_loops()
+        logger.debug(f"Found {len(loops)} loops")
+        
         # Create loops from traversal results
-        for producer_id, chain_ids, branch_info in loops:
-            if chain_ids:
-                self.create_loop(producer_id, chain_ids)
-                self.loop_branches[producer_id] = branch_info
-                logger.info(f"[Orchestrator] Created loop starting at {producer_id} with chain: {chain_ids}")
-            else:
-                logger.warning(f"[Orchestrator] Warning: No chain found for ProducerNode {producer_id}")
+        for start_node, end_node in loops:
+            try:
+                self.create_loop(start_node, end_node)
+                logger.info(f"[Orchestrator] Created loop from {start_node.id} to {end_node.id}")
+            except ValueError as e:
+                logger.warning(f"[Orchestrator] Warning: Could not create loop from {start_node.id} to {end_node.id}: {e}")
