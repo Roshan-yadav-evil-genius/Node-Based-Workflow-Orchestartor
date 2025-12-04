@@ -31,7 +31,7 @@ class WorkflowGraph:
             )
 
         self.node_map[workflow_node.id] = workflow_node
-        logger.info(f"WorkflowNode Added To Graph", id=workflow_node.id, base_node_type=node_type(workflow_node.instance), identifier=f"{workflow_node.instance.__class__.__name__}({workflow_node.instance.identifier()})")
+        logger.info(f"WorkflowNode Added To Graph", node_id=workflow_node.id, base_node_type=node_type(workflow_node.instance), identifier=f"{workflow_node.instance.__class__.__name__}({workflow_node.instance.identifier()})")
 
     def add_node_at_end_of(
         self, node_id: str, workflow_node: WorkflowNode, key: str = "default"

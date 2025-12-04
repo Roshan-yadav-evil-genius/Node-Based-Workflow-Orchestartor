@@ -165,7 +165,7 @@ class NodeFactory:
             logger.info(
                 f"Initialized BaseNode Instance",
                 base_node_type=node_type(base_node_instance),
-                id=nodeConfig.id,
+                node_id=nodeConfig.id,
                 identifier=f"{base_node_instance.__class__.__name__}({base_node_instance.identifier()})",
             )
             return base_node_instance
