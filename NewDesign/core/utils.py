@@ -3,6 +3,11 @@ Utility functions and classes for core workflow management.
 """
 
 
+from Nodes.Core import BaseNode
+from Nodes.Core.BaseNode import ProducerNode, NonBlockingNode, LogicalNode, BlockingNode
+from typing import Optional
+
+
 class BranchKeyNormalizer:
     """
     Utility class for normalizing branch keys between different formats.
@@ -58,3 +63,17 @@ class BranchKeyNormalizer:
         """
         capitalized = BranchKeyNormalizer.normalize_to_capitalized(branch_key)
         return capitalized or "default"
+
+
+def node_type( base_node_instance: BaseNode) -> Optional[str]:
+
+    if isinstance(base_node_instance, ProducerNode):
+        return ProducerNode.__name__
+    elif isinstance(base_node_instance, NonBlockingNode):
+        return NonBlockingNode.__name__
+    elif isinstance(base_node_instance, LogicalNode):
+        return LogicalNode.__name__
+    elif isinstance(base_node_instance, BlockingNode):
+        return BlockingNode.__name__
+    else:
+        return None

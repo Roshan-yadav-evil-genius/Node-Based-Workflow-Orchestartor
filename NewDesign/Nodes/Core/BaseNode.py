@@ -55,7 +55,7 @@ class BlockingNode(BaseNode, ABC):
     """
     pass
 
-class LogicalNodes(BlockingNode, ABC):
+class LogicalNode(BlockingNode, ABC):
     """
     Base class for logical/conditional nodes that perform decision-making operations.
     Inherits from BlockingNode, ensuring logical operations complete before continuation.

@@ -1,10 +1,10 @@
-from ...Core import LogicalNodes, NodeOutput, PoolType
+from ...Core import LogicalNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
 logger = structlog.get_logger(__name__)
 
-class IfCondition(LogicalNodes):
+class IfCondition(LogicalNode):
     @classmethod
     def identifier(cls) -> str:
         return "if-condition"
