@@ -24,7 +24,7 @@ class QueueNode(NonBlockingNode):
         data_store = DataStore.get_shared_instance()
         
         # Extract queue name from node config
-        queue_name = self.config.dict().get("queue_name", "default")
+        queue_name = self.config.data.get("queue_name", "default")
         
         # Push data to queue
         await data_store.push(queue_name, node_data)
