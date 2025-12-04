@@ -1,4 +1,3 @@
-import asyncio
 import json
 import structlog
 from typing import Any, Dict, Optional
@@ -13,18 +12,17 @@ class DataStore:
     Handles queues, caching, and other shared data operations.
     
     This implementation is process-safe: Redis handles concurrent access from
-    multiple processes automatically. Each process should create its own DataStore
+    multiple processes automatically. Each node should create its own DataStore
     instance with its own Redis connection, and they can all safely access the
     same Redis keys/queues.
     
     Design principles:
-    - Each process gets its own Redis connection (created lazily on first use)
-    - All operations are async and thread-safe
+    - Each instance gets its own Redis connection (created lazily on first use)
+    - All operations are async
     - Data is serialized to JSON for storage
     - Queue operations use Redis Lists (LPUSH/BRPOP)
     - Cache operations use Redis Strings with optional TTL
     """
-    _shared_instance = None
     
     def __init__(
         self,
@@ -50,82 +48,28 @@ class DataStore:
         self._password = password
         self._pool_size = pool_size
         self._connection: Optional[asyncio_redis.Connection] = None
-        self._connection_lock = asyncio.Lock()
         self._prefix = "datastore:"  # Prefix for all keys to avoid conflicts
-    
-    @classmethod
-    def set_shared_instance(cls, instance):
-        """
-        Set the shared DataStore instance.
-        
-        This should be called by the WorkflowOrchestrator during initialization
-        to make the DataStore available globally to all nodes.
-        
-        Args:
-            instance: DataStore instance to set as shared
-        """
-        cls._shared_instance = instance
-        return cls._shared_instance
-    
-    @classmethod
-    def get_shared_instance(cls)->"DataStore":
-        """
-        Get the shared DataStore instance.
-        
-        Returns:
-            DataStore: The shared DataStore instance
-            
-        Raises:
-            RuntimeError: If shared instance has not been initialized
-        """
-        if cls._shared_instance is None:
-            raise RuntimeError(
-                "DataStore shared instance not initialized. "
-                "Ensure WorkflowOrchestrator is initialized first."
-            )
-        return cls._shared_instance
-    
-    @classmethod
-    def reset_shared_instance(cls):
-        """
-        Reset shared instance (for testing).
-        
-        This method is useful in test scenarios where you need to reset
-        the shared instance between tests.
-        """
-        cls._shared_instance = None
 
     async def _ensure_connection(self):
         """
         Ensure Redis connection is established.
-        Uses a lock to prevent multiple simultaneous connection attempts.
-        
-        This is safe to call from multiple processes - each process will
-        create its own connection to Redis.
+        Creates connection lazily on first use.
         """
         if self._connection is None:
-            logger.info(f"Connecting to Redis", host=self._host, port=self._port, db=self._db, password=self._password)
-            async with self._connection_lock:
-                # Double-check after acquiring lock
-                logger.info(f"Checking if connection is established", connection=self._connection)
-                if self._connection is None:
-                    try:
-                        logger.info(f"Creating Redis connection", host=self._host, port=self._port, db=self._db, password=self._password)
-                        self._connection = await asyncio_redis.Connection.create(
-                            host=self._host,
-                            port=self._port,
-                            db=self._db,
-                            password=self._password
-                        )
-                        logger.info(
-                            f"Connected to Redis at {self._host}:{self._port}"
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to connect to Redis: {e}",
-                            exc_info=True
-                        )
-                        raise
+            try:
+                self._connection = await asyncio_redis.Connection.create(
+                    host=self._host,
+                    port=self._port,
+                    db=self._db,
+                    password=self._password
+                )
+                logger.info(f"Connected to Redis at {self._host}:{self._port}")
+            except Exception as e:
+                logger.error(
+                    f"Failed to connect to Redis: {e}",
+                    exc_info=True
+                )
+                raise
     
     async def close(self):
         """
@@ -137,11 +81,11 @@ class DataStore:
             self._connection = None
             logger.info("Redis connection closed")
     
-    def _serialize(self, data: Any) -> str:
+    def _serialize(self, data: Dict) -> str:
         """Serialize data to JSON string."""
         return json.dumps(data)
     
-    def _deserialize(self, data: Optional[str]) -> Any:
+    def _deserialize(self, data: Optional[str]) -> Dict:
         """Deserialize JSON string to Python object."""
         if data is None:
             return None
@@ -157,7 +101,7 @@ class DataStore:
 
     # ========== Queue Operations ==========
     
-    async def push(self, queue_name: str, data: Any):
+    async def push(self, queue_name: str, data: Dict):
         """
         Push data to a named queue using Redis LPUSH.
         
@@ -173,8 +117,8 @@ class DataStore:
         serialized_data = self._serialize(data)
         
         try:
-            logger.info(f"Pushing data to queue",queue_key=queue_key, serialized_data=serialized_data)
-            await self._connection.lpush(queue_key, serialized_data)
+            logger.info(f"Pushing data to queue",queue_key=queue_key, serialized_data=serialized_data,data_type=type(serialized_data))
+            await self._connection.lpush(queue_key, [serialized_data])
             logger.info(f"Pushed to queue '{queue_name}'")
         except Exception as e:
             logger.error(
@@ -219,8 +163,8 @@ class DataStore:
             if result is None:
                 return None
             
-            # BRPOP returns (key, value) tuple
-            _, serialized_data = result
+            # BRPOP returns BlockingPopReply object with value attribute
+            serialized_data = result.value
             data = self._deserialize(serialized_data)
             logger.info(f"Popped from queue '{queue_name}'")
             return data

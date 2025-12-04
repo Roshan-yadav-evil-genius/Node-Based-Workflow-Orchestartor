@@ -32,19 +32,14 @@ class QueueReader(ProducerNode):
         """
         Execute the queue reader by popping data from the queue.
         
-        Uses DataStore.get_shared_instance() to access the shared DataStore
-        instance for queue operations. Blocks indefinitely until data is available.
+        Creates its own DataStore instance for queue operations. Blocks indefinitely until data is available.
         """
-        data_store = DataStore.get_shared_instance()
+        data_store = DataStore()
         
         # Extract queue name from node config (validated by NodeValidator)
         queue_name = self.config.data["queue_name"]
         
         # Pop data from queue (blocks indefinitely until data arrives)
-        logger.info(f"[{self.config.type}] Reading data from queue '{queue_name}' (blocking indefinitely)...")
-        result = await data_store.pop(queue_name, timeout=None)
-        
-        # Return the data from queue
-        logger.info(f"[{self.config.type}] Received data from queue '{queue_name}': {result}")
+        result = await data_store.pop(queue_name, timeout=0)
         
         return NodeOutput(**result)

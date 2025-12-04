@@ -33,10 +33,9 @@ class QueueNode(NonBlockingNode):
         """
         Execute the queue node by pushing data to the queue.
         
-        Uses DataStore.get_shared_instance() to access the shared DataStore
-        instance for queue operations.
+        Creates its own DataStore instance for queue operations.
         """
-        data_store = DataStore.get_shared_instance()
+        data_store = DataStore()
         
         # Extract queue name from node config (validated by NodeValidator)
         queue_name = self.config.data["queue_name"]

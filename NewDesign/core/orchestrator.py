@@ -26,7 +26,7 @@ class WorkflowOrchestrator:
     _post_processors: List[Type[PostProcessor]] = [QueueMapper, NodeValidator]
 
     def __init__(self):
-        self.data_store = DataStore.set_shared_instance(DataStore())
+        self.data_store = DataStore()
         self.loop_managers: List[LoopManager] = []
         self.workflow_graph = WorkflowGraph()
         self.graph_traverser = GraphTraverser(self.workflow_graph)
