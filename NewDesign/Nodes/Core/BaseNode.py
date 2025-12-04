@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Dict
 from .Data import NodeConfig, NodeOutput, PoolType
 
 class BaseNode(ABC):
@@ -29,6 +29,16 @@ class BaseNode(ABC):
         This identifier is used to map node types from workflow definitions to node classes.
         """
         pass
+
+    def ready(self) -> Dict[str, str]:
+        """
+        Validate that the node has all required config fields.
+        
+        Returns:
+            Dictionary mapping field names to error messages.
+            Empty dict if node is ready, non-empty dict if validation fails.
+        """
+        return {}
 
 class NonBlockingNode(BaseNode, ABC):
     """

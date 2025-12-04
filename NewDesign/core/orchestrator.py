@@ -1,6 +1,6 @@
 import asyncio
 import structlog
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Type
 from Nodes.Core.BaseNode import BaseNode
 from Nodes.Core.Data import NodeOutput
 from core.graph import WorkflowGraph
@@ -8,6 +8,9 @@ from core.graph_traverser import GraphTraverser
 from core.workflow_loader import WorkflowLoader
 from core.workflow_node import WorkflowNode
 from core.node_factory import NodeFactory
+from core.PostProcessing import PostProcessor
+from core.PostProcessing.queue_mapper import QueueMapper
+from core.PostProcessing.node_validator import NodeValidator
 from execution.loop_manager import LoopManager
 from storage.data_store import DataStore
 
@@ -19,6 +22,8 @@ class WorkflowOrchestrator:
     Central coordination system for workflow execution.
     Follows Single Responsibility Principle - only handles coordination and lifecycle management.
     """
+
+    _post_processors: List[Type[PostProcessor]] = [QueueMapper, NodeValidator]
 
     def __init__(self):
         self.data_store = DataStore.set_shared_instance(DataStore())
@@ -143,6 +148,11 @@ class WorkflowOrchestrator:
         """
         # Delegate workflow loading to WorkflowLoader
         self.workflow_loader.load_workflow(workflow_json)
+
+        # Execute all post-processors
+        for processor_class in self._post_processors:
+            processor = processor_class(self.workflow_graph)
+            processor.execute()
 
         first_node_id = self.graph_traverser.get_first_node_id()
         if first_node_id:
