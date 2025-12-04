@@ -15,6 +15,5 @@ class DbStatusUpdater(NonBlockingNode):
         return PoolType.THREAD
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.type}] Updating DB status...")
         await asyncio.sleep(0.2)
         return node_data

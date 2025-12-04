@@ -11,18 +11,32 @@ class DataStore:
     Redis-backed data store for cross-loop communication and state management.
     Handles queues, caching, and other shared data operations.
     
+    Singleton pattern: Only one instance exists throughout the application.
+    All nodes share the same DataStore instance and Redis connection.
+    
     This implementation is process-safe: Redis handles concurrent access from
-    multiple processes automatically. Each node should create its own DataStore
-    instance with its own Redis connection, and they can all safely access the
-    same Redis keys/queues.
+    multiple processes automatically. All nodes share the same DataStore instance
+    and can safely access the same Redis keys/queues.
     
     Design principles:
-    - Each instance gets its own Redis connection (created lazily on first use)
+    - Singleton pattern - only one instance exists
+    - Single Redis connection shared by all nodes (created lazily on first use)
     - All operations are async
     - Data is serialized to JSON for storage
     - Queue operations use Redis Lists (LPUSH/BRPOP)
     - Cache operations use Redis Strings with optional TTL
     """
+    _instance = None
+    
+    def __new__(cls, host: str = "127.0.0.1", port: int = 6379,
+                db: int = 0, password: Optional[str] = None,
+                pool_size: int = 10):
+        """
+        Create or return existing singleton instance.
+        """
+        if cls._instance is None:
+            cls._instance = super(DataStore, cls).__new__(cls)
+        return cls._instance
     
     def __init__(
         self,
@@ -34,6 +48,7 @@ class DataStore:
     ):
         """
         Initialize DataStore with Redis connection parameters.
+        Only initializes on first call - subsequent calls are ignored.
         
         Args:
             host: Redis host address
@@ -42,6 +57,10 @@ class DataStore:
             password: Optional Redis password
             pool_size: Connection pool size (for future use with connection pooling)
         """
+        # Prevent re-initialization if already initialized
+        if hasattr(self, '_initialized'):
+            return
+        
         self._host = host
         self._port = port
         self._db = db
@@ -49,6 +68,7 @@ class DataStore:
         self._pool_size = pool_size
         self._connection: Optional[asyncio_redis.Connection] = None
         self._prefix = "datastore:"  # Prefix for all keys to avoid conflicts
+        self._initialized = True
 
     async def _ensure_connection(self):
         """
@@ -117,9 +137,9 @@ class DataStore:
         serialized_data = self._serialize(data)
         
         try:
-            logger.info(f"Pushing data to queue",queue_key=queue_key, serialized_data=serialized_data,data_type=type(serialized_data))
+            logger.info(f"Pushing data to queue",queue_key=queue_key, data=data)
             await self._connection.lpush(queue_key, [serialized_data])
-            logger.info(f"Pushed to queue '{queue_name}'")
+            logger.info(f"Pushed to queue",queue_key=queue_key, data=data)
         except Exception as e:
             logger.error(
                 f"Failed to push to queue '{queue_name}': {e}",
@@ -166,7 +186,7 @@ class DataStore:
             # BRPOP returns BlockingPopReply object with value attribute
             serialized_data = result.value
             data = self._deserialize(serialized_data)
-            logger.info(f"Popped from queue '{queue_name}'")
+            logger.info(f"Popped from queue",queue_key=queue_key, data=data)
             return data
             
         except Exception as e:

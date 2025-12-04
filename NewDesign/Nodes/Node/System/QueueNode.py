@@ -33,7 +33,7 @@ class QueueNode(NonBlockingNode):
         """
         Execute the queue node by pushing data to the queue.
         
-        Creates its own DataStore instance for queue operations.
+        Uses DataStore singleton instance for queue operations.
         """
         data_store = DataStore()
         

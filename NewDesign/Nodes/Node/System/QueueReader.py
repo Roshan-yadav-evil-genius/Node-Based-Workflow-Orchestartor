@@ -32,7 +32,7 @@ class QueueReader(ProducerNode):
         """
         Execute the queue reader by popping data from the queue.
         
-        Creates its own DataStore instance for queue operations. Blocks indefinitely until data is available.
+        Uses DataStore singleton instance for queue operations. Blocks indefinitely until data is available.
         """
         data_store = DataStore()
         
