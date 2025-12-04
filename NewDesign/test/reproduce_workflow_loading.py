@@ -6,12 +6,13 @@ import sys
 # Add the current directory to sys.path to ensure imports work
 sys.path.append(os.getcwd())
 
+from config.logging_config import setup_logging
 from core.orchestrator import WorkflowOrchestrator
 
 
 async def main():
     print("--- Starting Reproduction Script ---")
-
+    setup_logging()
     # 1. Load workflow.json from test folder
     try:
         workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
