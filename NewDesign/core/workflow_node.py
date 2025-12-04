@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
+from Nodes.Core.BaseNode import BaseNode
 
 
 @dataclass
@@ -9,6 +10,7 @@ class WorkflowNode:
     Contains only node data and connection management.
     """
     id: str
+    instance: BaseNode
     next: Dict[str, "WorkflowNode"] = field(default_factory=dict)
 
     def add_next(self, node: "WorkflowNode", key: str = "default"):

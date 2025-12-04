@@ -15,6 +15,6 @@ class StoreNode(NonBlockingNode):
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         store_name = self.config.dict().get("store_name", "default_store") # Access config safely
-        logger.info(f"[{self.config.node_name}] Storing job in {store_name}...")
+        logger.info(f"[{self.config.type}] Storing job in {store_name}...")
         await asyncio.sleep(0.2)
         return node_data

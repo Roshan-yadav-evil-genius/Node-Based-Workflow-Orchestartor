@@ -59,17 +59,16 @@ class WorkflowLoader:
         for node_def in nodes:
             try:
                 # Build node directly (merged from NodeBuilder)
-                result = self._build_node(node_def)
-                if result:
-                    workflow_node, base_node = result
-                    self.workflow_graph.add_node(workflow_node, base_node)
-                    logger.info(f"[WorkflowLoader] Registered node: {workflow_node.id} of type {base_node.__class__.__name__}")
+                workflow_node = self._build_node(node_def)
+                if workflow_node:
+                    self.workflow_graph.add_node(workflow_node)
+                    logger.info(f"[WorkflowLoader] Registered node: {workflow_node.id} of type {workflow_node.instance.__class__.__name__}")
                 else:
                     logger.warning(f"[WorkflowLoader] Node {node_def.get('id')} of type {node_def.get('type')} could not be instantiated")
             except ValueError as e:
                 logger.warning(f"[WorkflowLoader] Could not add node: {e}")
     
-    def _build_node(self, node_def: Dict[str, Any]) -> Optional[Tuple[WorkflowNode, BaseNode]]:
+    def _build_node(self, node_def: Dict[str, Any]) -> Optional[WorkflowNode]:
         """
         Build WorkflowNode and BaseNode from node definition.
         
@@ -77,30 +76,23 @@ class WorkflowLoader:
             node_def: Dictionary containing node definition with keys: id, type, data
             
         Returns:
-            Tuple of (WorkflowNode, BaseNode) if successful, None otherwise
+            WorkflowNode if successful, None otherwise
         """
         node_id = node_def["id"]
-        node_type = node_def["type"]
-        node_data = node_def.get("data", {})
-        
-        # Extract config data
-        config_data = node_data.get("config", {})
-        config_data["node_id"] = node_id
-        config_data["node_name"] = node_id  # Use ID as name for now
         
         # Create NodeConfig
-        config = NodeConfig(**config_data)
+        config = NodeConfig(**node_def)
         
         # Create BaseNode instance using factory
-        base_node = self.node_factory.create_node(node_type, config)
+        base_node = self.node_factory.create_node(config)
         
         if not base_node:
             return None
         
         # Create WorkflowNode instance
-        workflow_node = WorkflowNode(id=node_id)
+        workflow_node = WorkflowNode(id=node_id, instance=base_node)
         
-        return (workflow_node, base_node)
+        return workflow_node
     
     def _connect_nodes(self, edges: List[Dict[str, Any]]):
         """
@@ -128,6 +120,5 @@ class WorkflowLoader:
         """
         producer_nodes = self.workflow_graph.get_producer_nodes()
         for producer_node in producer_nodes:
-            base_node = self.workflow_graph.get_base_node(producer_node.id)
-            if base_node:
-                logger.info(f"[WorkflowLoader] Found ProducerNode: {producer_node.id} of type {base_node.__class__.__name__}({base_node.identifier()})")
+            if producer_node:
+                logger.info(f"[WorkflowLoader] Found ProducerNode: {producer_node.id} of type {producer_node.instance.__class__.__name__}({producer_node.instance.identifier()})")

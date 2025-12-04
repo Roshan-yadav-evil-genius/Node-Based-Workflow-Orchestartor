@@ -28,6 +28,6 @@ class QueueNode(NonBlockingNode):
         
         # Push data to queue
         await data_store.push(queue_name, node_data)
-        logger.info(f"[{self.config.node_name}] Pushed data to queue '{queue_name}': {node_data.data}")
+        logger.info(f"[{self.config.type}] Pushed data to queue '{queue_name}': {node_data.data}")
         
         return node_data

@@ -16,11 +16,11 @@ class AiMlScoring(BlockingNode):
         return PoolType.PROCESS
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Scoring job with AI/ML...")
+        logger.info(f"[{self.config.type}] Scoring job with AI/ML...")
         await asyncio.sleep(0.5)
 
         score = random.random()
         node_data.data["score"] = score
-        logger.info(f"[{self.config.node_name}] Score: {score:.2f}")
+        logger.info(f"[{self.config.type}] Score: {score:.2f}")
 
         return node_data

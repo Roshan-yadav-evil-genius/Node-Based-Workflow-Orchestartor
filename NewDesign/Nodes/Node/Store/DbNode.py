@@ -14,6 +14,6 @@ class DbNode(NonBlockingNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Saving to DB...")
+        logger.info(f"[{self.config.type}] Saving to DB...")
         await asyncio.sleep(0.3)
         return node_data

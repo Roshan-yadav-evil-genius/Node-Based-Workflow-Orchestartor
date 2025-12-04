@@ -15,6 +15,6 @@ class TelegramSender(BlockingNode):
         return PoolType.THREAD
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Sending Telegram notification...")
+        logger.info(f"[{self.config.type}] Sending Telegram notification...")
         await asyncio.sleep(0.4)
         return node_data

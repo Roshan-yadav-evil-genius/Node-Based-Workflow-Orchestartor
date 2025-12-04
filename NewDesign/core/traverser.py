@@ -214,5 +214,5 @@ class GraphTraverser:
         Returns:
             True if the node is a NonBlockingNode, False otherwise
         """
-        base_node = self.workflow_graph.get_base_node(node_id)
+        base_node = self.workflow_graph.get_node_instance(node_id)
         return base_node is not None and isinstance(base_node, NonBlockingNode)

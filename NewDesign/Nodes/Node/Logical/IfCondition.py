@@ -14,17 +14,17 @@ class IfCondition(LogicalNodes):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info("Performing condition check...",node_id=self.config.node_id)
+        logger.info("Performing condition check...",node_id=self.config.id)
 
         await asyncio.sleep(5)
         
         title = node_data.data.get("job_title", "").lower()
         node_data.metadata["condition"] = "python" in title
 
-        logger.info("If condition Executed",node_id=self.config.node_id,condition=node_data.metadata["condition"])
+        logger.info("If condition Executed",node_id=self.config.id,condition=node_data.metadata["condition"])
         
         return NodeOutput(
-            id=self.config.node_id,
+            id=self.config.id,
             data=node_data.data,
             metadata=node_data.metadata
         )

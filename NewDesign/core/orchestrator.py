@@ -23,7 +23,7 @@ class WorkflowOrchestrator:
         self.workflow_loader = WorkflowLoader()
 
     def register_node(self, node: BaseNode):
-        self.nodes[node.config.node_id] = node
+        self.nodes[node.config.id] = node
 
     def create_loop(self, producer_id: str, chain_ids: List[str]):
         producer = self.nodes.get(producer_id)
@@ -70,7 +70,7 @@ class WorkflowOrchestrator:
         workflow_graph = self.workflow_loader.load_workflow(workflow_json)
         
         # Store nodes in orchestrator for access
-        self.nodes = workflow_graph.base_nodes
+        self.nodes = {node_id: workflow_node.instance for node_id, workflow_node in workflow_graph.node_map.items()}
         
         # Delegate graph traversal to GraphTraverser
         graph_traverser = GraphTraverser(workflow_graph)

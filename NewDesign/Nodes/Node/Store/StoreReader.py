@@ -14,6 +14,6 @@ class StoreReader(ProducerNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Reading job from store...")
+        logger.info(f"[{self.config.type}] Reading job from store...")
         await asyncio.sleep(0.1)
         return node_data

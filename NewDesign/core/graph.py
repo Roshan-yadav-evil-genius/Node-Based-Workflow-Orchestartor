@@ -12,37 +12,33 @@ class WorkflowGraph:
 
     def __init__(self):
         self.node_map: Dict[str, WorkflowNode] = {}  # Linked graph structure for traversal
-        self.base_nodes: Dict[str, BaseNode] = {}  # Executable node instances (for execution)
 
-    def add_node(self, workflow_node: WorkflowNode, base_node: BaseNode):
+    def add_node(self, workflow_node: WorkflowNode):
         """
         Add a node to the graph.
         
         Args:
             workflow_node: WorkflowNode instance to add
-            base_node: BaseNode instance for execution
         """
         if workflow_node.id in self.node_map:
             raise ValueError(f"Node with id '{workflow_node.id}' already exists in the graph")
         
         self.node_map[workflow_node.id] = workflow_node
-        self.base_nodes[workflow_node.id] = base_node
 
-    def add_node_at_end_of(self, node_id: str, workflow_node: WorkflowNode, base_node: BaseNode, key: str = "default"):
+    def add_node_at_end_of(self, node_id: str, workflow_node: WorkflowNode, key: str = "default"):
         """
         Add a node at the end of a specific node.
         
         Args:
             node_id: ID of the node to add after
             workflow_node: WorkflowNode instance to add
-            base_node: BaseNode instance for execution
             key: Key to use for the connection (default: "default")
         """
         if node_id not in self.node_map:
             raise ValueError(f"Node with id '{node_id}' not found in the graph")
         
         # Add the new node first
-        self.add_node(workflow_node, base_node)
+        self.add_node(workflow_node)
         
         # Connect it to the specified node
         self.node_map[node_id].add_next(workflow_node, key)
@@ -81,7 +77,7 @@ class WorkflowGraph:
         Returns:
             List of producer node IDs
         """
-        return [node_id for node_id, node_instance in self.base_nodes.items() if isinstance(node_instance, ProducerNode)]
+        return [node_id for node_id, node_instance in self.node_map.items() if isinstance(node_instance.instance, ProducerNode)]
 
     def get_first_node_id(self) -> Optional[str]:
         """
@@ -140,9 +136,9 @@ class WorkflowGraph:
             List of non-blocking WorkflowNodes
         """
         non_blocking_nodes = []
-        for node_id, base_node in self.base_nodes.items():
-            if isinstance(base_node, NonBlockingNode) and node_id in self.node_map:
-                non_blocking_nodes.append(self.node_map[node_id])
+        for workFlowNodeId, workflowNode in self.node_map.items():
+            if isinstance(workflowNode.instance, NonBlockingNode):
+                non_blocking_nodes.append(workflowNode)
         return non_blocking_nodes
 
     def get_node(self, node_id: str) -> Optional[WorkflowNode]:
@@ -157,7 +153,7 @@ class WorkflowGraph:
         """
         return self.node_map.get(node_id)
 
-    def get_base_node(self, node_id: str) -> Optional[BaseNode]:
+    def get_node_instance(self, node_id: str) -> Optional[BaseNode]:
         """
         Get BaseNode instance by ID.
         
@@ -167,5 +163,6 @@ class WorkflowGraph:
         Returns:
             BaseNode or None if not found
         """
-        return self.base_nodes.get(node_id)
+        workflow_node = self.node_map.get(node_id)
+        return workflow_node.instance if workflow_node else None
 

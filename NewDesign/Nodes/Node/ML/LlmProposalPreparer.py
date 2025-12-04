@@ -15,7 +15,7 @@ class LlmProposalPreparer(BlockingNode):
         return PoolType.PROCESS
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Preparing proposal with LLM...")
+        logger.info(f"[{self.config.type}] Preparing proposal with LLM...")
         await asyncio.sleep(1.0)
         node_data.data["proposal"] = "Generated Proposal Content..."
         return node_data

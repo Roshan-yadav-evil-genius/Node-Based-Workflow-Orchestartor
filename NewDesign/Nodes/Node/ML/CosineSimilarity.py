@@ -16,7 +16,7 @@ class CosineSimilarity(BlockingNode):
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
 
-        logger.info("Calculating cosine similarity...",node_id=self.config.node_id)
+        logger.info("Calculating cosine similarity...",node_id=self.config.id)
 
         
         await asyncio.sleep(5)
@@ -26,11 +26,11 @@ class CosineSimilarity(BlockingNode):
 
         node_data.data["similarity_score"] = similarity
 
-        logger.info("Similarity: {similarity}",node_id=self.config.node_id,similarity=similarity)
+        logger.info("Similarity: {similarity}",node_id=self.config.id,similarity=similarity)
 
         
         return NodeOutput(
-            id=self.config.node_id,
+            id=self.config.id,
             data=node_data.data,
             metadata=node_data.metadata
         )

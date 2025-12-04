@@ -30,12 +30,12 @@ class QueueReader(ProducerNode):
         timeout = config_dict.get("timeout", 5.0)  # Default 5 seconds
         
         # Pop data from queue
-        logger.info(f"[{self.config.node_name}] Reading data from queue '{queue_name}' (timeout: {timeout}s)...")
+        logger.info(f"[{self.config.type}] Reading data from queue '{queue_name}' (timeout: {timeout}s)...")
         result = await data_store.pop(queue_name, timeout)
         
         if result is None:
             # Timeout occurred - return empty data to allow loop to continue
-            logger.warning(f"[{self.config.node_name}] Timeout waiting for data from queue '{queue_name}'")
+            logger.warning(f"[{self.config.type}] Timeout waiting for data from queue '{queue_name}'")
             return NodeOutput(
                 id=str(uuid.uuid4()),
                 data={},
@@ -43,5 +43,5 @@ class QueueReader(ProducerNode):
             )
         
         # Return the data from queue
-        logger.info(f"[{self.config.node_name}] Received data from queue '{queue_name}': {result}")
+        logger.info(f"[{self.config.type}] Received data from queue '{queue_name}': {result}")
         return result

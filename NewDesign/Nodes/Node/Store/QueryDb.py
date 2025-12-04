@@ -14,6 +14,6 @@ class QueryDb(ProducerNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.node_name}] Querying DB...")
+        logger.info(f"[{self.config.type}] Querying DB...")
         await asyncio.sleep(0.2)
         return node_data

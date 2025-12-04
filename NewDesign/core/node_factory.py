@@ -127,13 +127,12 @@ class NodeFactory:
             cls._node_registry = cls._discover_node_classes()
     
     @classmethod
-    def create_node(cls, node_type: str, config: NodeConfig) -> Optional[BaseNode]:
+    def create_node(cls,nodeConfig: NodeConfig) -> Optional[BaseNode]:
         """
         Create a node instance based on node type and configuration.
         
         Args:
-            node_type: String identifier for the node type
-            config: NodeConfig object with node configuration
+            nodeConfig: NodeConfig object with node configuration
             
         Returns:
             BaseNode instance or None if node type is unknown
@@ -142,9 +141,9 @@ class NodeFactory:
         cls._ensure_registry_loaded()
         
         # Get node class from registry
-        node_cls = cls._node_registry.get(node_type)
+        node_cls = cls._node_registry.get(nodeConfig.type)
         if node_cls:
-            return node_cls(config)
+            return node_cls(nodeConfig)
         
-        logger.warning(f"[NodeFactory] Warning: Unknown node type '{node_type}'")
+        logger.warning(f"[NodeFactory] Warning: Unknown node type '{nodeConfig.type}'")
         return None

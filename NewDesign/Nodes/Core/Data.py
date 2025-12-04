@@ -15,9 +15,9 @@ class NodeConfig(BaseModel):
     Static initialization/config settings for a node.
     """
 
-    node_id: str = Field(..., description="Unique identifier for the node")
-    node_name: str = Field(..., description="Human-readable name for the node")
-    form_data: Optional[Dict[str, Any]] = Field(
+    id: str = Field(..., description="Unique identifier for the node")
+    type: str = Field(..., description="Human-readable name for the node")
+    data: Optional[Dict[str, Any]] = Field(
         default=None, description="Form data for the node"
     )
 
