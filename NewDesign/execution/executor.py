@@ -10,8 +10,7 @@ import pickle
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, TYPE_CHECKING
 
-from Nodes.Core.ExecutionPool import ExecutionPool
-from Nodes.Core.NodeData import NodeData
+from Nodes.Core.Data import PoolType, NodeOutput
 
 if TYPE_CHECKING:
     from Nodes.Core.BaseNode import BaseNode
@@ -40,10 +39,10 @@ class Executor:
     
     async def execute_in_pool(
         self,
-        pool: ExecutionPool,
+        pool: PoolType,
         node: 'BaseNode',
-        node_data: NodeData
-    ) -> NodeData:
+        node_output: NodeOutput
+    ) -> NodeOutput:
         """
         Execute a node in the specified execution pool.
         
@@ -58,21 +57,21 @@ class Executor:
         Raises:
             Exception: Any exception raised by the node's execute method
         """
-        if pool == ExecutionPool.ASYNC:
-            return await self._execute_async(node, node_data)
-        elif pool == ExecutionPool.THREAD:
-            return await self._execute_thread(node, node_data)
-        elif pool == ExecutionPool.PROCESS:
-            return await self._execute_process(node, node_data)
+        if pool == PoolType.ASYNC:
+            return await self._execute_async(node, node_output)
+        elif pool == PoolType.THREAD:
+            return await self._execute_thread(node, node_output)
+        elif pool == PoolType.PROCESS:
+            return await self._execute_process(node, node_output)
         else:
             raise ValueError(f"Unknown execution pool: {pool}")
     
-    async def _execute_async(self, node: 'BaseNode', node_data: NodeData) -> NodeData:
+    async def _execute_async(self, node: 'BaseNode', node_output: NodeOutput) -> NodeOutput:
         """Execute node directly in async context."""
-        return await node.execute(node_data)
+        return await node.execute(node_output)
     
     @staticmethod
-    def _run_in_thread(node: 'BaseNode', node_data: NodeData) -> NodeData:
+    def _run_in_thread(node: 'BaseNode', node_output: NodeOutput) -> NodeOutput:
         """
         Static method to execute a node in a thread pool.
         
@@ -83,11 +82,11 @@ class Executor:
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
         try:
-            return new_loop.run_until_complete(node.execute(node_data))
+            return new_loop.run_until_complete(node.execute(node_output))
         finally:
             new_loop.close()
     
-    async def _execute_thread(self, node: 'BaseNode', node_data: NodeData) -> NodeData:
+    async def _execute_thread(self, node: 'BaseNode', node_output: NodeOutput) -> NodeOutput:
         """Execute node in thread pool."""
         if self._thread_pool is None:
             self._thread_pool = ThreadPoolExecutor(max_workers=self._max_workers_thread)
@@ -98,7 +97,7 @@ class Executor:
             self._thread_pool,
             Executor._run_in_thread,
             node,
-            node_data
+            node_output
         )
     
     @staticmethod
@@ -142,7 +141,7 @@ class Executor:
         finally:
             new_loop.close()
     
-    async def _execute_process(self, node: 'BaseNode', node_data: NodeData) -> NodeData:
+    async def _execute_process(self, node: 'BaseNode', node_output: NodeOutput) -> NodeOutput:
         """Execute node in process pool."""
         if self._process_pool is None:
             self._process_pool = ProcessPoolExecutor(max_workers=self._max_workers_process)
@@ -154,7 +153,7 @@ class Executor:
         # special handling for process pool execution due to serialization constraints.
         try:
             serialized_node = self._serialize_node_for_process(node)
-            serialized_data = self._serialize_data_for_process(node_data)
+            serialized_data = self._serialize_data_for_process(node_output)
         except (pickle.PickleError, AttributeError) as e:
             raise ValueError(f"Cannot serialize node for process pool: {e}") from e
         
@@ -183,14 +182,14 @@ class Executor:
         except (pickle.PickleError, AttributeError) as e:
             raise ValueError(f"Cannot deserialize node from process pool: {e}") from e
     
-    def _serialize_data_for_process(self, node_data: NodeData) -> bytes:
+    def _serialize_data_for_process(self, node_output: NodeOutput) -> bytes:
         """Serialize NodeData for process pool."""
         try:
-            return pickle.dumps(node_data)
+            return pickle.dumps(node_output)
         except (pickle.PickleError, AttributeError) as e:
             raise ValueError(f"Cannot serialize NodeData for process pool: {e}") from e
     
-    def _deserialize_data_from_process(self, data: bytes) -> NodeData:
+    def _deserialize_data_from_process(self, data: bytes) -> NodeOutput:
         """Deserialize NodeData from process pool."""
         try:
             return pickle.loads(data)

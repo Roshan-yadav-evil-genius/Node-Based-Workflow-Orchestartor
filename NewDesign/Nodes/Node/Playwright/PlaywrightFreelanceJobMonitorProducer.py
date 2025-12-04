@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict
-from ...Core.ProducerNode import ProducerNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import ProducerNode, NodeOutput, PoolType
 import asyncio
 import structlog
 import uuid
@@ -16,19 +14,19 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         return "playwright-freelance-job-monitor-producer"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"Monitoring freelance jobs...",node_id=self.config.node_id)
 
         await asyncio.sleep(5) # Simulate delay
         job_data = self.get_job_data()
         logger.info("Found job",node_id=self.config.node_id,data=job_data)
 
-        return NodeData(
+        return NodeOutput(
             id=self.config.node_id,
-            payload=job_data,
+            data=job_data,
             metadata={"sourceNodeID": self.config.node_id,"sourceNodeName": self.config.node_name}
         )
     

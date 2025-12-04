@@ -1,6 +1,4 @@
-from ...Core.BlockingNode import BlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import BlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -13,10 +11,10 @@ class TelegramSender(BlockingNode):
         return "telegram-sender"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.THREAD
+    def execution_pool(self) -> PoolType:
+        return PoolType.THREAD
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Sending Telegram notification...")
         await asyncio.sleep(0.4)
         return node_data

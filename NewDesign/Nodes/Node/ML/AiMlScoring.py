@@ -1,6 +1,4 @@
-from ...Core.BlockingNode import BlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import BlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 import random
@@ -14,15 +12,15 @@ class AiMlScoring(BlockingNode):
         return "ai-ml-scoring"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.PROCESS
+    def execution_pool(self) -> PoolType:
+        return PoolType.PROCESS
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Scoring job with AI/ML...")
         await asyncio.sleep(0.5)
 
         score = random.random()
-        node_data.payload["score"] = score
+        node_data.data["score"] = score
         logger.info(f"[{self.config.node_name}] Score: {score:.2f}")
 
         return node_data

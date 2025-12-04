@@ -1,6 +1,6 @@
 import structlog
 from typing import Dict, List, Set, Tuple, Optional
-from Nodes.Core.NonBlockingNode import NonBlockingNode
+from Nodes.Core.BaseNode import NonBlockingNode
 from core.graph import WorkflowGraph
 from core.utils import BranchKeyNormalizer
 
@@ -139,12 +139,12 @@ class GraphTraverser:
         current_id = start_id
         
         while current_id:
-            # Validate and process current node
-            if not self._validate_and_add_node(current_id, visited, branch_chain):
+            # Check if this is a NonBlockingNode (marks branch end) - check before adding
+            if self._is_non_blocking_node(current_id):
                 break
             
-            # Check if this is a NonBlockingNode (marks branch end)
-            if self._is_non_blocking_node(current_id):
+            # Validate and process current node
+            if not self._validate_and_add_node(current_id, visited, branch_chain):
                 break
             
             # Get next nodes using the linked structure

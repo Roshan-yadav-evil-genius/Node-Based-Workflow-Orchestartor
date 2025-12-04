@@ -1,7 +1,7 @@
 import structlog
 from typing import Dict, List, Any, Optional, Tuple
 from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.NodeConfig import NodeConfig
+from Nodes.Core.Data import NodeConfig
 from core.graph import WorkflowGraph
 from core.node_factory import NodeFactory
 from core.utils import BranchKeyNormalizer

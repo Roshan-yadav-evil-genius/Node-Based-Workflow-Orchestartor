@@ -2,7 +2,7 @@ import asyncio
 import structlog
 from typing import Dict, List, Any
 from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.NodeData import NodeData
+from Nodes.Core.Data import NodeOutput
 from execution.loop_manager import LoopManager
 from storage.data_store import DataStore
 from core.loader import WorkflowLoader
@@ -46,7 +46,7 @@ class WorkflowOrchestrator:
             return
         await asyncio.gather(*tasks)
 
-    async def run_development_node(self, node_id: str, input_data: NodeData) -> NodeData:
+    async def run_development_node(self, node_id: str, input_data: NodeOutput) -> NodeOutput:
         """
         Execute a single node directly (Development Mode).
         """
@@ -57,7 +57,7 @@ class WorkflowOrchestrator:
             
         # In real dev mode, we would check Redis for upstream dependencies here
         
-        return await node.execute(input_data)
+        return await node.execute(previous_node_output=input_data)
 
     def load_workflow(self, workflow_json: Dict[str, Any]):
         """

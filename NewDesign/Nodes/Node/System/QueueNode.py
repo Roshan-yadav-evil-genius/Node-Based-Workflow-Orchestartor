@@ -1,6 +1,4 @@
-from ...Core.NonBlockingNode import NonBlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import NonBlockingNode, NodeOutput, PoolType
 from storage.data_store import DataStore
 import asyncio
 import structlog
@@ -13,10 +11,10 @@ class QueueNode(NonBlockingNode):
         return "queue-node-dummy"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """
         Execute the queue node by pushing data to the queue.
         
@@ -30,6 +28,6 @@ class QueueNode(NonBlockingNode):
         
         # Push data to queue
         await data_store.push(queue_name, node_data)
-        logger.info(f"[{self.config.node_name}] Pushed data to queue '{queue_name}': {node_data.payload}")
+        logger.info(f"[{self.config.node_name}] Pushed data to queue '{queue_name}': {node_data.data}")
         
         return node_data

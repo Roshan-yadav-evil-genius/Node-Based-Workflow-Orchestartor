@@ -1,11 +1,8 @@
 import asyncio
 import structlog
 from typing import List, Optional
-from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.ProducerNode import ProducerNode
-from Nodes.Core.BlockingNode import BlockingNode
-from Nodes.Core.NonBlockingNode import NonBlockingNode
-from Nodes.Core.NodeData import NodeData
+from Nodes.Core.BaseNode import BaseNode, ProducerNode, BlockingNode, NonBlockingNode
+from Nodes.Core.Data import NodeOutput
 from execution.executor import Executor
 
 logger = structlog.get_logger(__name__)
@@ -15,7 +12,7 @@ class LoopManager:
     Manages a single loop in Production Mode.
     Executes node chains in defined order.
     """
-    def __init__(self, producer: ProducerNode, chain: List[BaseNode], executor: Optional[Executor] = None):
+    def __init__(self, producer: ProducerNode, chain: List[BlockingNode | NonBlockingNode], executor: Optional[Executor] = None):
         self.producer = producer
         self.chain = chain # List of nodes after the producer
         self.executor = executor or Executor()
@@ -31,7 +28,7 @@ class LoopManager:
                 data = await self.executor.execute_in_pool(
                     self.producer.execution_pool,
                     self.producer,
-                    NodeData(id="init", payload={})
+                    NodeOutput(data={})
                 )
                 
                 # 2. Execute Chain (Blocking -> NonBlocking) - each node in its preferred pool

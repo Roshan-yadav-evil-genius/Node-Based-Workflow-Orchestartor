@@ -1,6 +1,4 @@
-from ...Core.ProducerNode import ProducerNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import ProducerNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -12,10 +10,10 @@ class QueryDb(ProducerNode):
         return "query-db"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Querying DB...")
         await asyncio.sleep(0.2)
         return node_data

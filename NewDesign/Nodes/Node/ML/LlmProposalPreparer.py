@@ -1,6 +1,4 @@
-from ...Core.BlockingNode import BlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import BlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -13,11 +11,11 @@ class LlmProposalPreparer(BlockingNode):
         return "llm-proposal-preparer"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.PROCESS
+    def execution_pool(self) -> PoolType:
+        return PoolType.PROCESS
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Preparing proposal with LLM...")
         await asyncio.sleep(1.0)
-        node_data.payload["proposal"] = "Generated Proposal Content..."
+        node_data.data["proposal"] = "Generated Proposal Content..."
         return node_data

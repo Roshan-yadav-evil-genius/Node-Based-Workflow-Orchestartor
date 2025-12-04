@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional
 from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.ProducerNode import ProducerNode
-from Nodes.Core.NonBlockingNode import NonBlockingNode
+from Nodes.Core.BaseNode import ProducerNode, NonBlockingNode
 from core.workflow_node import WorkflowNode
 
 

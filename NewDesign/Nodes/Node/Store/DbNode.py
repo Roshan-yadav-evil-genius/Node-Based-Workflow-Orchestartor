@@ -1,6 +1,4 @@
-from ...Core.NonBlockingNode import NonBlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import NonBlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -12,10 +10,10 @@ class DbNode(NonBlockingNode):
         return "db-node"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Saving to DB...")
         await asyncio.sleep(0.3)
         return node_data

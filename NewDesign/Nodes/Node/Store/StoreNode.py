@@ -1,6 +1,4 @@
-from ...Core.NonBlockingNode import NonBlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import NonBlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -12,10 +10,10 @@ class StoreNode(NonBlockingNode):
         return "store-node"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         store_name = self.config.dict().get("store_name", "default_store") # Access config safely
         logger.info(f"[{self.config.node_name}] Storing job in {store_name}...")
         await asyncio.sleep(0.2)

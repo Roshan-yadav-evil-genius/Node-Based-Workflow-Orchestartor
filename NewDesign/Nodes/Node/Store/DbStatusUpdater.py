@@ -1,6 +1,4 @@
-from ...Core.NonBlockingNode import NonBlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import NonBlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -13,10 +11,10 @@ class DbStatusUpdater(NonBlockingNode):
         return "db-status-updater"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.THREAD
+    def execution_pool(self) -> PoolType:
+        return PoolType.THREAD
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Updating DB status...")
         await asyncio.sleep(0.2)
         return node_data

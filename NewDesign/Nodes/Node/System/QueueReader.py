@@ -1,6 +1,4 @@
-from ...Core.ProducerNode import ProducerNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import ProducerNode, NodeOutput, PoolType
 from storage.data_store import DataStore
 import asyncio
 import structlog
@@ -14,10 +12,10 @@ class QueueReader(ProducerNode):
         return "queue-reader-dummy"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """
         Execute the queue reader by popping data from the queue.
         
@@ -38,9 +36,9 @@ class QueueReader(ProducerNode):
         if result is None:
             # Timeout occurred - return empty data to allow loop to continue
             logger.warning(f"[{self.config.node_name}] Timeout waiting for data from queue '{queue_name}'")
-            return NodeData(
+            return NodeOutput(
                 id=str(uuid.uuid4()),
-                payload={},
+                data={},
                 metadata={"source": "queue_reader", "timeout": True}
             )
         

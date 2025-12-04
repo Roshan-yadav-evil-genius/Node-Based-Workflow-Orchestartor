@@ -4,11 +4,8 @@ import pkgutil
 import importlib
 import inspect
 from Nodes.Core.BaseNode import BaseNode
-from Nodes.Core.NodeConfig import NodeConfig
-from Nodes.Core.ProducerNode import ProducerNode
-from Nodes.Core.BlockingNode import BlockingNode
-from Nodes.Core.NonBlockingNode import NonBlockingNode
-from Nodes.Core.LogicalNodes import LogicalNodes
+from Nodes.Core.Data import NodeConfig
+from Nodes.Core.BaseNode import ProducerNode, BlockingNode, NonBlockingNode, LogicalNodes
 
 logger = structlog.get_logger(__name__)
 

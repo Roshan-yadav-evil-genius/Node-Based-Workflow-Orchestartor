@@ -1,6 +1,4 @@
-from ...Core.NonBlockingNode import NonBlockingNode
-from ...Core.NodeData import NodeData
-from ...Core.ExecutionPool import ExecutionPool
+from ...Core import NonBlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
 
@@ -12,10 +10,10 @@ class PlaywrightFreelanceBidder(NonBlockingNode):
         return "playwright-freelance-bidder"
 
     @property
-    def execution_pool(self) -> ExecutionPool:
-        return ExecutionPool.ASYNC
+    def execution_pool(self) -> PoolType:
+        return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeData) -> NodeData:
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info(f"[{self.config.node_name}] Submitting bid via Playwright...")
         await asyncio.sleep(1.5)
         logger.info(f"[{self.config.node_name}] Bid submitted!")
