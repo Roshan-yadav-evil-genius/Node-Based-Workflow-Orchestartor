@@ -18,11 +18,9 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"Monitoring freelance jobs...",node_id=self.config.id)
 
-        await asyncio.sleep(5) # Simulate delay
+        await asyncio.sleep(2) # Simulate delay
         job_data = self.get_job_data()
-        logger.info("Found job",node_id=self.config.id,data=job_data)
 
         return NodeOutput(
             id=self.config.id,

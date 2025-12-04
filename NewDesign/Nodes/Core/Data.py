@@ -49,3 +49,7 @@ class NodeOutput(BaseModel):
     metadata: Optional[Union[NodeOutPutMetaData, Dict[str, Any]]] = Field(
         default_factory=dict, description="Optional metadata"
     )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self.model_dump()
+        

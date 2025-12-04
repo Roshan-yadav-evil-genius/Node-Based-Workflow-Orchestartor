@@ -46,4 +46,5 @@ class QueueReader(ProducerNode):
         
         # Return the data from queue
         logger.info(f"[{self.config.type}] Received data from queue '{queue_name}': {result}")
-        return result
+        
+        return NodeOutput(**result)

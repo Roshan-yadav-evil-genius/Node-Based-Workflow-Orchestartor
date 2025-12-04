@@ -16,7 +16,7 @@ class IfCondition(LogicalNode):
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         logger.info("Performing condition check...",node_id=self.config.id)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
         
         title = node_data.data.get("job_title", "").lower()
         node_data.metadata["condition"] = "python" in title

@@ -68,7 +68,7 @@ class DataStore:
         return cls._shared_instance
     
     @classmethod
-    def get_shared_instance(cls):
+    def get_shared_instance(cls)->"DataStore":
         """
         Get the shared DataStore instance.
         
@@ -104,10 +104,13 @@ class DataStore:
         create its own connection to Redis.
         """
         if self._connection is None:
+            logger.info(f"Connecting to Redis", host=self._host, port=self._port, db=self._db, password=self._password)
             async with self._connection_lock:
                 # Double-check after acquiring lock
+                logger.info(f"Checking if connection is established", connection=self._connection)
                 if self._connection is None:
                     try:
+                        logger.info(f"Creating Redis connection", host=self._host, port=self._port, db=self._db, password=self._password)
                         self._connection = await asyncio_redis.Connection.create(
                             host=self._host,
                             port=self._port,
@@ -115,11 +118,11 @@ class DataStore:
                             password=self._password
                         )
                         logger.info(
-                            f"[DataStore] Connected to Redis at {self._host}:{self._port}"
+                            f"Connected to Redis at {self._host}:{self._port}"
                         )
                     except Exception as e:
                         logger.error(
-                            f"[DataStore] Failed to connect to Redis: {e}",
+                            f"Failed to connect to Redis: {e}",
                             exc_info=True
                         )
                         raise
@@ -132,7 +135,7 @@ class DataStore:
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-            logger.info("[DataStore] Redis connection closed")
+            logger.info("Redis connection closed")
     
     def _serialize(self, data: Any) -> str:
         """Serialize data to JSON string."""
@@ -170,11 +173,12 @@ class DataStore:
         serialized_data = self._serialize(data)
         
         try:
-            await self._connection.lpush(queue_key, [serialized_data])
-            logger.info(f"[DataStore] Pushed to queue '{queue_name}'")
+            logger.info(f"Pushing data to queue",queue_key=queue_key, serialized_data=serialized_data)
+            await self._connection.lpush(queue_key, serialized_data)
+            logger.info(f"Pushed to queue '{queue_name}'")
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to push to queue '{queue_name}': {e}",
+                f"Failed to push to queue '{queue_name}': {e}",
                 exc_info=True
             )
             raise
@@ -202,13 +206,15 @@ class DataStore:
             # Convert timeout to integer seconds for Redis BRPOP
             # BRPOP timeout of 0 means return immediately, None means block indefinitely
             if timeout is None:
-                redis_timeout = None  # Block indefinitely
+                # Block indefinitely - don't pass timeout parameter
+                result = await self._connection.brpop([queue_key])
             elif timeout == 0:
-                redis_timeout = 0  # Return immediately
+                # Return immediately
+                result = await self._connection.brpop([queue_key], timeout=0)
             else:
+                # Block for specified seconds
                 redis_timeout = int(timeout)
-            
-            result = await self._connection.brpop(queue_key, timeout=redis_timeout)
+                result = await self._connection.brpop([queue_key], timeout=redis_timeout)
             
             if result is None:
                 return None
@@ -216,12 +222,12 @@ class DataStore:
             # BRPOP returns (key, value) tuple
             _, serialized_data = result
             data = self._deserialize(serialized_data)
-            logger.info(f"[DataStore] Popped from queue '{queue_name}'")
+            logger.info(f"Popped from queue '{queue_name}'")
             return data
             
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to pop from queue '{queue_name}': {e}",
+                f"Failed to pop from queue '{queue_name}': {e}",
                 exc_info=True
             )
             raise
@@ -244,7 +250,7 @@ class DataStore:
             return length
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to get queue length for '{queue_name}': {e}",
+                f"Failed to get queue length for '{queue_name}': {e}",
                 exc_info=True
             )
             raise
@@ -272,10 +278,10 @@ class DataStore:
                 await self._connection.setex(cache_key, ttl, serialized_value)
             else:
                 await self._connection.set(cache_key, serialized_value)
-            logger.debug(f"[DataStore] Set cache key '{key}'")
+            logger.debug(f"Set cache key '{key}'")
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to set cache key '{key}': {e}",
+                f"Failed to set cache key '{key}': {e}",
                 exc_info=True
             )
             raise
@@ -303,7 +309,7 @@ class DataStore:
             return self._deserialize(serialized_value)
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to get cache key '{key}': {e}",
+                f"Failed to get cache key '{key}': {e}",
                 exc_info=True
             )
             raise
@@ -320,10 +326,10 @@ class DataStore:
         
         try:
             await self._connection.delete([cache_key])
-            logger.debug(f"[DataStore] Deleted cache key '{key}'")
+            logger.debug(f"Deleted cache key '{key}'")
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to delete cache key '{key}': {e}",
+                f"Failed to delete cache key '{key}': {e}",
                 exc_info=True
             )
             raise
@@ -346,7 +352,7 @@ class DataStore:
             return bool(exists)
         except Exception as e:
             logger.error(
-                f"[DataStore] Failed to check existence of cache key '{key}': {e}",
+                f"Failed to check existence of cache key '{key}': {e}",
                 exc_info=True
             )
             raise
