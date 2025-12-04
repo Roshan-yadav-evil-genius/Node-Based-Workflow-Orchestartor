@@ -1,22 +1,57 @@
 import asyncio
+import json
 import structlog
 from typing import Any, Dict, Optional
+import asyncio_redis
 
 logger = structlog.get_logger(__name__)
+
 
 class DataStore:
     """
     Redis-backed data store for cross-loop communication and state management.
     Handles queues, caching, and other shared data operations.
     
-    Currently uses in-memory asyncio.Queue as a placeholder for Redis implementation.
+    This implementation is process-safe: Redis handles concurrent access from
+    multiple processes automatically. Each process should create its own DataStore
+    instance with its own Redis connection, and they can all safely access the
+    same Redis keys/queues.
+    
+    Design principles:
+    - Each process gets its own Redis connection (created lazily on first use)
+    - All operations are async and thread-safe
+    - Data is serialized to JSON for storage
+    - Queue operations use Redis Lists (LPUSH/BRPOP)
+    - Cache operations use Redis Strings with optional TTL
     """
     _shared_instance = None
     
-    def __init__(self):
-        # In a real implementation, this would be a Redis client.
-        # For now, we use an in-memory dictionary of asyncio.Queues.
-        self._queues: Dict[str, asyncio.Queue] = {}
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 6379,
+        db: int = 0,
+        password: Optional[str] = None,
+        pool_size: int = 10
+    ):
+        """
+        Initialize DataStore with Redis connection parameters.
+        
+        Args:
+            host: Redis host address
+            port: Redis port
+            db: Redis database number
+            password: Optional Redis password
+            pool_size: Connection pool size (for future use with connection pooling)
+        """
+        self._host = host
+        self._port = port
+        self._db = db
+        self._password = password
+        self._pool_size = pool_size
+        self._connection: Optional[asyncio_redis.Connection] = None
+        self._connection_lock = asyncio.Lock()
+        self._prefix = "datastore:"  # Prefix for all keys to avoid conflicts
     
     @classmethod
     def set_shared_instance(cls, instance):
@@ -60,53 +95,258 @@ class DataStore:
         """
         cls._shared_instance = None
 
-    async def get_queue(self, queue_name: str) -> asyncio.Queue:
+    async def _ensure_connection(self):
         """
-        Get or create a queue by name.
+        Ensure Redis connection is established.
+        Uses a lock to prevent multiple simultaneous connection attempts.
         
-        Args:
-            queue_name: Name of the queue
-            
-        Returns:
-            asyncio.Queue: The queue instance
+        This is safe to call from multiple processes - each process will
+        create its own connection to Redis.
         """
-        if queue_name not in self._queues:
-            self._queues[queue_name] = asyncio.Queue()
-        return self._queues[queue_name]
+        if self._connection is None:
+            async with self._connection_lock:
+                # Double-check after acquiring lock
+                if self._connection is None:
+                    try:
+                        self._connection = await asyncio_redis.Connection.create(
+                            host=self._host,
+                            port=self._port,
+                            db=self._db,
+                            password=self._password
+                        )
+                        logger.info(
+                            f"[DataStore] Connected to Redis at {self._host}:{self._port}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"[DataStore] Failed to connect to Redis: {e}",
+                            exc_info=True
+                        )
+                        raise
+    
+    async def close(self):
+        """
+        Close the Redis connection.
+        Should be called when the DataStore is no longer needed.
+        """
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
+            logger.info("[DataStore] Redis connection closed")
+    
+    def _serialize(self, data: Any) -> str:
+        """Serialize data to JSON string."""
+        return json.dumps(data)
+    
+    def _deserialize(self, data: Optional[str]) -> Any:
+        """Deserialize JSON string to Python object."""
+        if data is None:
+            return None
+        return json.loads(data)
+    
+    def _queue_key(self, queue_name: str) -> str:
+        """Get Redis key for a queue."""
+        return f"{self._prefix}queue:{queue_name}"
+    
+    def _cache_key(self, key: str) -> str:
+        """Get Redis key for cache."""
+        return f"{self._prefix}cache:{key}"
 
+    # ========== Queue Operations ==========
+    
     async def push(self, queue_name: str, data: Any):
         """
-        Push data to a named queue.
+        Push data to a named queue using Redis LPUSH.
         
-        In a real implementation, this would push to Redis.
-        Currently uses in-memory asyncio.Queue as placeholder.
+        This operation is process-safe - multiple processes can push to
+        the same queue simultaneously without issues.
         
         Args:
             queue_name: Name of the queue
-            data: Data to push to the queue
+            data: Data to push to the queue (will be JSON serialized)
         """
-        queue = await self.get_queue(queue_name)
-        await queue.put(data)
-        logger.info(f"[DataStore] Pushed to '{queue_name}': {data}")
+        await self._ensure_connection()
+        queue_key = self._queue_key(queue_name)
+        serialized_data = self._serialize(data)
+        
+        try:
+            await self._connection.lpush(queue_key, [serialized_data])
+            logger.info(f"[DataStore] Pushed to queue '{queue_name}'")
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to push to queue '{queue_name}': {e}",
+                exc_info=True
+            )
+            raise
 
-    async def pop(self, queue_name: str, timeout: Optional[float] = None) -> Any:
+    async def pop(self, queue_name: str, timeout: Optional[float] = None) -> Optional[Any]:
         """
-        Pop data from a named queue.
+        Pop data from a named queue using Redis BRPOP (blocking right pop).
         
-        In a real implementation, this would pop from Redis.
-        Currently uses in-memory asyncio.Queue as placeholder.
+        This operation is process-safe - multiple processes can pop from
+        the same queue, and Redis will ensure each message is delivered
+        to only one consumer.
         
         Args:
             queue_name: Name of the queue
-            timeout: Optional timeout in seconds for blocking pop operation
+            timeout: Optional timeout in seconds for blocking pop operation.
+                    If None, blocks indefinitely. If 0, returns immediately.
             
         Returns:
-            Any: Data popped from the queue, or None if timeout occurs
+            Any: Data popped from the queue (deserialized), or None if timeout occurs
         """
-        queue = await self.get_queue(queue_name)
-        if timeout:
-            try:
-                return await asyncio.wait_for(queue.get(), timeout)
-            except asyncio.TimeoutError:
+        await self._ensure_connection()
+        queue_key = self._queue_key(queue_name)
+        
+        try:
+            # Convert timeout to integer seconds for Redis BRPOP
+            # BRPOP timeout of 0 means return immediately, None means block indefinitely
+            if timeout is None:
+                redis_timeout = None  # Block indefinitely
+            elif timeout == 0:
+                redis_timeout = 0  # Return immediately
+            else:
+                redis_timeout = int(timeout)
+            
+            result = await self._connection.brpop(queue_key, timeout=redis_timeout)
+            
+            if result is None:
                 return None
-        return await queue.get()
+            
+            # BRPOP returns (key, value) tuple
+            _, serialized_data = result
+            data = self._deserialize(serialized_data)
+            logger.info(f"[DataStore] Popped from queue '{queue_name}'")
+            return data
+            
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to pop from queue '{queue_name}': {e}",
+                exc_info=True
+            )
+            raise
+
+    async def queue_length(self, queue_name: str) -> int:
+        """
+        Get the length of a queue.
+        
+        Args:
+            queue_name: Name of the queue
+            
+        Returns:
+            int: Number of items in the queue
+        """
+        await self._ensure_connection()
+        queue_key = self._queue_key(queue_name)
+        
+        try:
+            length = await self._connection.llen(queue_key)
+            return length
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to get queue length for '{queue_name}': {e}",
+                exc_info=True
+            )
+            raise
+
+    # ========== Cache Operations ==========
+    
+    async def set_cache(self, key: str, value: Any, ttl: Optional[int] = None):
+        """
+        Set a value in the cache.
+        
+        This operation is process-safe - multiple processes can write to
+        the same key, with the last write winning.
+        
+        Args:
+            key: Cache key
+            value: Value to cache (will be JSON serialized)
+            ttl: Optional time-to-live in seconds
+        """
+        await self._ensure_connection()
+        cache_key = self._cache_key(key)
+        serialized_value = self._serialize(value)
+        
+        try:
+            if ttl is not None:
+                await self._connection.setex(cache_key, ttl, serialized_value)
+            else:
+                await self._connection.set(cache_key, serialized_value)
+            logger.debug(f"[DataStore] Set cache key '{key}'")
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to set cache key '{key}': {e}",
+                exc_info=True
+            )
+            raise
+
+    async def get_cache(self, key: str) -> Optional[Any]:
+        """
+        Get a value from the cache.
+        
+        This operation is process-safe - multiple processes can read from
+        the same key simultaneously.
+        
+        Args:
+            key: Cache key
+            
+        Returns:
+            Any: Cached value (deserialized), or None if not found
+        """
+        await self._ensure_connection()
+        cache_key = self._cache_key(key)
+        
+        try:
+            serialized_value = await self._connection.get(cache_key)
+            if serialized_value is None:
+                return None
+            return self._deserialize(serialized_value)
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to get cache key '{key}': {e}",
+                exc_info=True
+            )
+            raise
+
+    async def delete_cache(self, key: str):
+        """
+        Delete a value from the cache.
+        
+        Args:
+            key: Cache key to delete
+        """
+        await self._ensure_connection()
+        cache_key = self._cache_key(key)
+        
+        try:
+            await self._connection.delete([cache_key])
+            logger.debug(f"[DataStore] Deleted cache key '{key}'")
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to delete cache key '{key}': {e}",
+                exc_info=True
+            )
+            raise
+
+    async def exists_cache(self, key: str) -> bool:
+        """
+        Check if a cache key exists.
+        
+        Args:
+            key: Cache key to check
+            
+        Returns:
+            bool: True if key exists, False otherwise
+        """
+        await self._ensure_connection()
+        cache_key = self._cache_key(key)
+        
+        try:
+            exists = await self._connection.exists(cache_key)
+            return bool(exists)
+        except Exception as e:
+            logger.error(
+                f"[DataStore] Failed to check existence of cache key '{key}': {e}",
+                exc_info=True
+            )
+            raise

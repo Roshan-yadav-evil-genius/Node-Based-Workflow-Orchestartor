@@ -111,3 +111,26 @@ class WorkflowGraph:
         """
         workflow_node = self.node_map.get(node_id)
         return workflow_node.instance if workflow_node else None
+
+    def get_upstream_nodes(self, node_id: str) -> List[WorkflowNode]:
+        """
+        Get all upstream (parent) nodes that have this node as their next node.
+
+        Args:
+            node_id: ID of the target node
+
+        Returns:
+            List of upstream WorkflowNodes that point to this node
+        """
+        if node_id not in self.node_map:
+            return []
+        
+        upstream_nodes = []
+        for workflow_node in self.node_map.values():
+            # Check if any of this node's next nodes is our target node
+            for next_node in workflow_node.next.values():
+                if next_node.id == node_id:
+                    upstream_nodes.append(workflow_node)
+                    break
+        
+        return upstream_nodes

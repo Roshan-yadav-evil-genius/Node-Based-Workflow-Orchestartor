@@ -66,15 +66,75 @@ class WorkflowOrchestrator:
     ) -> NodeOutput:
         """
         Execute a single node directly (Development Mode).
+        
+        In Development Mode:
+        1. Checks Redis cache for upstream node outputs
+        2. Uses cached output as input if available, otherwise uses provided input_data
+        3. Executes the node
+        4. Stores the output in Redis cache for downstream nodes
         """
         logger.info(f"Development Mode: Executing node {node_id}")
         node = self.workflow_graph.get_node_instance(node_id)
         if not node:
             raise ValueError(f"Node {node_id} not found")
 
-        # In real dev mode, we would check Redis for upstream dependencies here
+        # Check Redis cache for upstream dependencies
+        upstream_nodes = self.workflow_graph.get_upstream_nodes(node_id)
+        
+        # If there are upstream nodes, try to get their cached outputs
+        # For now, we'll use the first upstream node's output if available
+        # In a more complex scenario, we might need to merge multiple upstream outputs
+        if upstream_nodes:
+            # Try to get cached output from the first upstream node
+            # In a real implementation, you might want to handle multiple upstream nodes
+            upstream_node_id = upstream_nodes[0].id
+            cached_output = await self.data_store.get_cache(f"{upstream_node_id}_output")
+            
+            if cached_output is not None:
+                logger.info(
+                    f"Development Mode: Using cached output from upstream node '{upstream_node_id}'"
+                )
+                # Use cached output as input
+                if isinstance(cached_output, dict):
+                    # If cached output is a dict, reconstruct NodeOutput from it
+                    try:
+                        input_data = NodeOutput(**cached_output)
+                    except Exception as e:
+                        logger.warning(
+                            f"Development Mode: Failed to reconstruct NodeOutput from cache: {e}, using provided input_data"
+                        )
+                        # Keep the provided input_data if reconstruction fails
+                else:
+                    input_data = cached_output
+            else:
+                logger.debug(
+                    f"Development Mode: No cached output found for upstream node '{upstream_node_id}', using provided input_data"
+                )
+        else:
+            logger.debug(
+                f"Development Mode: No upstream nodes found for '{node_id}', using provided input_data"
+            )
 
-        return await node.execute(previous_node_output=input_data)
+        # Execute the node
+        result = await node.execute(previous_node_output=input_data)
+        
+        # Store the output in Redis cache for downstream nodes
+        cache_key = f"{node_id}_output"
+        # Serialize NodeOutput to dict for caching using Pydantic's dict() method
+        # Try model_dump() first (Pydantic v2), fall back to dict() (Pydantic v1)
+        try:
+            output_dict = result.model_dump() if hasattr(result, 'model_dump') else result.dict()
+        except AttributeError:
+            # Fallback: manually construct dict from fields
+            output_dict = {
+                "id": result.id,
+                "data": result.data,
+                "metadata": result.metadata
+            }
+        await self.data_store.set_cache(cache_key, output_dict)
+        logger.info(f"Development Mode: Stored output for node '{node_id}' in cache")
+        
+        return result
 
     def load_workflow(self, workflow_json: Dict[str, Any]):
         """
