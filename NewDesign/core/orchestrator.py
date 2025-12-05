@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 from typing import Dict, List, Any, Type
-from Nodes.Core.BaseNode import BaseNode
+from Nodes.Core.BaseNode import BaseNode, ProducerNode
 from Nodes.Core.Data import NodeOutput
 from core.graph import WorkflowGraph
 from core.graph_traverser import GraphTraverser
@@ -32,27 +32,18 @@ class WorkflowOrchestrator:
         self.graph_traverser = GraphTraverser(self.workflow_graph)
         self.workflow_loader = WorkflowLoader(self.workflow_graph, NodeFactory())
 
-    def create_loop(
-        self, start_workflow_node: WorkflowNode, end_workflow_node: WorkflowNode
-    ):
+    def create_loop(self, producer_workflow_node: WorkflowNode):
         """
-        Create a loop from starting producer WorkflowNode to ending NonBlockingNode WorkflowNode.
+        Create a loop from starting producer WorkflowNode.
 
         Args:
-            start_workflow_node: Starting producer WorkflowNode
-            end_workflow_node: Ending NonBlockingNode WorkflowNode
+            producer_workflow_node: Starting producer WorkflowNode
         """
-        producer = start_workflow_node.instance
-        chain = self.graph_traverser.build_chain_from_start_to_end(
-            start_workflow_node, end_workflow_node
-        )
+        producer = producer_workflow_node.instance
+        if not isinstance(producer, ProducerNode):
+            raise ValueError(f"Node {producer_workflow_node.id} is not a ProducerNode")
 
-        if not producer or not chain:
-            raise ValueError(
-                f"Invalid loop: producer or chain is empty for producer {start_workflow_node.id}"
-            )
-
-        manager = LoopManager(producer, chain)
+        manager = LoopManager(producer_workflow_node)
         self.loop_managers.append(manager)
 
     async def run_production(self):
@@ -164,23 +155,21 @@ class WorkflowOrchestrator:
         else:
             raise ValueError("No first node found in the workflow")
 
-        # Find loops using GraphTraverser
-        loops = self.graph_traverser.find_loops()
-        logger.debug(f"Found {len(loops)} loops")
+        # Find producer nodes and create loops
+        producer_nodes = self.graph_traverser.get_producer_nodes()
+        logger.debug(f"Found {len(producer_nodes)} producer nodes")
 
-        # Create loops from traversal results
-        for start_node, end_node in loops:
+        # Create loops from producer nodes
+        for producer_workflow_node in producer_nodes:
             try:
-                self.create_loop(start_node, end_node)
+                self.create_loop(producer_workflow_node)
                 logger.info(
                     f"Created Loop",
-                    start_node_id=start_node.id,
-                    end_node_id=end_node.id,
+                    producer_node_id=producer_workflow_node.id,
                 )
             except ValueError as e:
                 logger.warning(
                     f"Failed to create loop",
                     error=str(e),
-                    start_node_id=start_node.id,
-                    end_node_id=end_node.id,
+                    producer_node_id=producer_workflow_node.id,
                 )

@@ -70,6 +70,13 @@ class LogicalNode(BlockingNode, ABC):
     Base class for logical/conditional nodes that perform decision-making operations.
     Inherits from BlockingNode, ensuring logical operations complete before continuation.
     """
-    pass
+    def __init__(self, config: NodeConfig):
+        super().__init__(config)
+        self.output: Optional[str] = None
+        self.test_result = False
+        
 
+    def set_output(self, output: bool):
+        self.test_result = output
+        self.output = "yes" if output else "no"
 

@@ -1,6 +1,7 @@
 from ...Core import LogicalNode, NodeOutput, PoolType
 import asyncio
 import structlog
+import random
 
 logger = structlog.get_logger(__name__)
 
@@ -14,14 +15,12 @@ class IfCondition(LogicalNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info("Performing condition check...",node_id=self.config.id)
 
         await asyncio.sleep(2)
-        
-        title = node_data.data.get("job_title", "").lower()
-        node_data.metadata["condition"] = "python" in title
 
-        logger.info("If condition Executed",node_id=self.config.id,condition=node_data.metadata["condition"])
+        # Set output property for branch selection
+        # 50% chance of true, 50% chance of false
+        self.set_output(random.random() < 0.5)
         
         return NodeOutput(
             id=self.config.id,

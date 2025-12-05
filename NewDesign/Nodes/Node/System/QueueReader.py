@@ -43,6 +43,6 @@ class QueueReader(ProducerNode):
         # Pop data from queue (blocks indefinitely until data arrives)
         result = await data_store.pop(queue_name, timeout=0)
 
-        logger.info(f"Popped from queue",queue_name=queue_name, loop_id=self.loop_identifier, node_id=self.config.id, node_type=f"{node_type(self)}({self.identifier()})", loop_count=self.loop_count)
+        logger.info(f"Popped from queue",queue_name=queue_name, node_id=self.config.id, node_type=f"{node_type(self)}({self.identifier()})")
         
         return NodeOutput(**result)
