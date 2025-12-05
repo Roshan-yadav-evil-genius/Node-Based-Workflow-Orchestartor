@@ -17,7 +17,7 @@ async def main():
     
     try:
         # Load workflow.json from test folder
-        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
+        workflow_path = os.path.join(os.path.dirname(__file__), "workflow1.json")
         with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
             

@@ -28,18 +28,19 @@ class QueueMapper(PostProcessor):
                 continue
             
             # Iterate through all connected nodes
-            for next_key, next_node in workflow_node.next.items():
-                # Check if the connected node is a QueueReader
-                if self._is_queue_reader(next_node.instance):
-                    # Generate unique queue name
-                    queue_name = self._generate_queue_name(node_id, next_node.id)
-                    
-                    # Assign queue name to both nodes
-                    self._assign_queue_name(workflow_node, next_node, queue_name)
-                    mapped_count += 1
-                    logger.info(
-                        f"Auto-assigned queue name '{queue_name}' to QueueNode '{node_id}' and QueueReader '{next_node.id}'"
-                    )
+            for next_key, next_nodes_list in workflow_node.next.items():
+                for next_node in next_nodes_list:
+                    # Check if the connected node is a QueueReader
+                    if self._is_queue_reader(next_node.instance):
+                        # Generate unique queue name
+                        queue_name = self._generate_queue_name(node_id, next_node.id)
+                        
+                        # Assign queue name to both nodes
+                        self._assign_queue_name(workflow_node, next_node, queue_name)
+                        mapped_count += 1
+                        logger.info(
+                            f"Auto-assigned queue name '{queue_name}' to QueueNode '{node_id}' and QueueReader '{next_node.id}'"
+                        )
         
         logger.info(f"Queue mapping completed. Mapped {mapped_count} QueueNode-QueueReader pairs.")
 

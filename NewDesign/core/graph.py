@@ -71,7 +71,7 @@ class WorkflowGraph:
 
         logger.info(f"Connected Nodes", from_id=from_id, to_id=to_id, key=key)
 
-    def get_all_next(self, node_id: str) -> Dict[str, WorkflowNode]:
+    def get_all_next(self, node_id: str) -> Dict[str, List[WorkflowNode]]:
         """
         Get all next nodes.
 
@@ -79,7 +79,7 @@ class WorkflowGraph:
             node_id: ID of the source node
 
         Returns:
-            Dictionary of key -> WorkflowNode mappings, or empty dict if none
+            Dictionary of key -> List[WorkflowNode] mappings, or empty dict if none
         """
         if node_id not in self.node_map:
             return {}
@@ -128,9 +128,13 @@ class WorkflowGraph:
         upstream_nodes = []
         for workflow_node in self.node_map.values():
             # Check if any of this node's next nodes is our target node
-            for next_node in workflow_node.next.values():
-                if next_node.id == node_id:
-                    upstream_nodes.append(workflow_node)
-                    break
+            for next_nodes_list in workflow_node.next.values():
+                for next_node in next_nodes_list:
+                    if next_node.id == node_id:
+                        upstream_nodes.append(workflow_node)
+                        break
+                else:
+                    continue
+                break
         
         return upstream_nodes

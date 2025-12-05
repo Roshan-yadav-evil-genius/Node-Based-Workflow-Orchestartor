@@ -61,8 +61,9 @@ class GraphTraverser:
         # Find all nodes that are targets of edges (have incoming edges)
         nodes_with_incoming_edges = set()
         for node in self.graph.node_map.values():
-            for next_node in node.next.values():
-                nodes_with_incoming_edges.add(next_node.id)
+            for next_nodes_list in node.next.values():
+                for next_node in next_nodes_list:
+                    nodes_with_incoming_edges.add(next_node.id)
 
         # Find nodes with no incoming edges (root nodes)
         root_nodes = [
@@ -163,12 +164,13 @@ class GraphTraverser:
             return None
 
         # If multiple branches, check all of them
-        for next_workflow_node in next_nodes.values():
-            ending_node = self._traverse_to_ending_node(
-                next_workflow_node, visited.copy()
-            )
-            if ending_node:
-                return ending_node
+        for next_nodes_list in next_nodes.values():
+            for next_workflow_node in next_nodes_list:
+                ending_node = self._traverse_to_ending_node(
+                    next_workflow_node, visited.copy()
+                )
+                if ending_node:
+                    return ending_node
 
         return None
 
@@ -211,13 +213,14 @@ class GraphTraverser:
             # If multiple branches, collect from all branches
             if len(next_nodes) > 1:
                 all_branch_nodes: Set[str] = set()
-                for next_workflow_node in next_nodes.values():
-                    branch_chain = self._traverse_branch_to_end(
-                        next_workflow_node, end_node, visited.copy()
-                    )
-                    for node_id in branch_chain:
-                        all_branch_nodes.add(node_id)
-                        visited.add(node_id)
+                for next_nodes_list in next_nodes.values():
+                    for next_workflow_node in next_nodes_list:
+                        branch_chain = self._traverse_branch_to_end(
+                            next_workflow_node, end_node, visited.copy()
+                        )
+                        for node_id in branch_chain:
+                            all_branch_nodes.add(node_id)
+                            visited.add(node_id)
 
                 # Add all branch nodes to chain
                 for node_id in all_branch_nodes:
@@ -228,8 +231,11 @@ class GraphTraverser:
                 # After processing branches, we should have reached end
                 break
             else:
-                # Single edge - follow normally
-                next_workflow_node = list(next_nodes.values())[0]
+                # Single edge - follow normally (get first node from first list)
+                first_list = list(next_nodes.values())[0] if next_nodes else []
+                if not first_list:
+                    break
+                next_workflow_node = first_list[0]
 
                 # Check if this is the end node
                 if next_workflow_node.id == end_node.id:
@@ -286,14 +292,20 @@ class GraphTraverser:
 
             # If multiple edges, recursively traverse all branches
             if len(next_nodes) > 1:
-                for next_workflow_node in next_nodes.values():
-                    sub_branch = self._traverse_branch_to_end(
-                        next_workflow_node, end_node, visited.copy()
-                    )
-                    branch_chain.extend(sub_branch)
+                for next_nodes_list in next_nodes.values():
+                    for next_workflow_node in next_nodes_list:
+                        sub_branch = self._traverse_branch_to_end(
+                            next_workflow_node, end_node, visited.copy()
+                        )
+                        branch_chain.extend(sub_branch)
                 break
             else:
-                current = list(next_nodes.values())[0]
+                # Get first node from first list
+                first_list = list(next_nodes.values())[0] if next_nodes else []
+                if first_list:
+                    current = first_list[0]
+                else:
+                    break
 
         return branch_chain
 
