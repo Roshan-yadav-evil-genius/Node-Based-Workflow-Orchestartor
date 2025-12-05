@@ -27,15 +27,21 @@ class QueueMapper(PostProcessor):
             if not self._is_queue_node(workflow_node.instance):
                 continue
             
-            # Iterate through all connected nodes
+            # MULTIPLE BRANCH SUPPORT: Must iterate through lists because QueueNode
+            # can connect to multiple QueueReaders through different branches
+            # OUTER LOOP: Iterate through all branch keys (e.g., "default", "yes", "no")
             for next_key, next_nodes_list in workflow_node.next.items():
+                # INNER LOOP: Iterate through all nodes in each branch list
+                # REASON: A QueueNode can have multiple QueueReader connections, each
+                # in a different branch. We need to map queue names for all of them.
                 for next_node in next_nodes_list:
                     # Check if the connected node is a QueueReader
                     if self._is_queue_reader(next_node.instance):
-                        # Generate unique queue name
+                        # Generate unique queue name for this QueueNode-QueueReader pair
+                        # Each pair gets its own queue name, even if from same QueueNode
                         queue_name = self._generate_queue_name(node_id, next_node.id)
                         
-                        # Assign queue name to both nodes
+                        # Assign queue name to both nodes' configs
                         self._assign_queue_name(workflow_node, next_node, queue_name)
                         mapped_count += 1
                         logger.info(

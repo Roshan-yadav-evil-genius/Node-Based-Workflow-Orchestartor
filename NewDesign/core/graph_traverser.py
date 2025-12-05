@@ -59,9 +59,17 @@ class GraphTraverser:
             return None
 
         # Find all nodes that are targets of edges (have incoming edges)
+        # MULTIPLE BRANCH SUPPORT: Must iterate through lists because multiple nodes
+        # can point to the same target node through different branches
         nodes_with_incoming_edges = set()
+        
+        # OUTER LOOP: Iterate through all nodes in the graph
         for node in self.graph.node_map.values():
+            # MIDDLE LOOP: Iterate through all branch keys (e.g., "default", "yes", "no")
             for next_nodes_list in node.next.values():
+                # INNER LOOP: Iterate through all nodes in each branch list
+                # REASON: A target node can appear in multiple branch lists, and we need
+                # to find all nodes that have incoming edges (are targets of any branch)
                 for next_node in next_nodes_list:
                     nodes_with_incoming_edges.add(next_node.id)
 
@@ -163,8 +171,13 @@ class GraphTraverser:
         if not next_nodes:
             return None
 
-        # If multiple branches, check all of them
+        # MULTIPLE BRANCH SUPPORT: Check all branches to find NonBlockingNode
+        # Must iterate through lists because multiple branches can exist per key
+        # OUTER LOOP: Iterate through all branch keys (e.g., "default", "yes", "no")
         for next_nodes_list in next_nodes.values():
+            # INNER LOOP: Iterate through all nodes in each branch list
+            # REASON: Traverse all paths to find ending NonBlockingNode
+            # Any branch that leads to a NonBlockingNode is valid
             for next_workflow_node in next_nodes_list:
                 ending_node = self._traverse_to_ending_node(
                     next_workflow_node, visited.copy()
@@ -210,28 +223,34 @@ class GraphTraverser:
             if not next_nodes:
                 break
 
-            # If multiple branches, collect from all branches
+            # MULTIPLE BRANCH SUPPORT: When multiple branch keys exist, collect from all
             if len(next_nodes) > 1:
                 all_branch_nodes: Set[str] = set()
+                # OUTER LOOP: Iterate through all branch keys
                 for next_nodes_list in next_nodes.values():
+                    # INNER LOOP: Iterate through all nodes in each branch list
+                    # REASON: Must traverse all branches to collect all nodes in all paths
                     for next_workflow_node in next_nodes_list:
                         branch_chain = self._traverse_branch_to_end(
                             next_workflow_node, end_node, visited.copy()
                         )
+                        # Collect all node IDs from this branch path
                         for node_id in branch_chain:
                             all_branch_nodes.add(node_id)
                             visited.add(node_id)
 
-                # Add all branch nodes to chain
+                # Add all branch nodes to chain (deduplicated via set)
                 for node_id in all_branch_nodes:
                     node = self.graph.get_node(node_id)
                     if node and node.instance not in chain:
                         chain.append(node.instance)
 
-                # After processing branches, we should have reached end
+                # After processing all branches, we should have reached end
                 break
             else:
-                # Single edge - follow normally (get first node from first list)
+                # SINGLE BRANCH CASE: Backward compatible behavior
+                # Get first node from first (and only) list
+                # This maintains compatibility with old single-node structure
                 first_list = list(next_nodes.values())[0] if next_nodes else []
                 if not first_list:
                     break
@@ -290,17 +309,24 @@ class GraphTraverser:
             if not next_nodes:
                 break
 
-            # If multiple edges, recursively traverse all branches
+            # MULTIPLE BRANCH SUPPORT: When multiple branch keys exist, traverse all
             if len(next_nodes) > 1:
+                # OUTER LOOP: Iterate through all branch keys
                 for next_nodes_list in next_nodes.values():
+                    # INNER LOOP: Iterate through all nodes in each branch list
+                    # REASON: Recursively traverse all branches to find end node
+                    # Each branch path is explored independently
                     for next_workflow_node in next_nodes_list:
                         sub_branch = self._traverse_branch_to_end(
                             next_workflow_node, end_node, visited.copy()
                         )
+                        # Extend chain with all nodes from this branch path
                         branch_chain.extend(sub_branch)
                 break
             else:
-                # Get first node from first list
+                # SINGLE BRANCH CASE: Backward compatible behavior
+                # Get first node from first (and only) list
+                # This maintains compatibility with old single-node structure
                 first_list = list(next_nodes.values())[0] if next_nodes else []
                 if first_list:
                     current = first_list[0]

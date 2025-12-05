@@ -101,19 +101,37 @@ class WorkflowLoader:
     def _connect_nodes(self, edges: List[Dict[str, Any]]):
         """
         Connect nodes in the graph using edge definitions.
+        
+        MULTIPLE BRANCH SUPPORT:
+        This method processes edges and connects them to the graph. When multiple edges
+        share the same source and same sourceHandle (or both null), they normalize to
+        the same key (typically "default"). The graph.connect_nodes() method calls
+        WorkflowNode.add_next(), which APPENDS to a list instead of overwriting.
+        
+        EXAMPLE: workflow1.json
+        - Edge 1: source="1", target="10", sourceHandle=null → key="default"
+        - Edge 2: source="1", target="14", sourceHandle=null → key="default"
+        - Result: node "1".next["default"] = [node_10, node_14]
+        
+        This is why multiple branches with the same key are stored as a list.
 
         Args:
-            edges: List of edge definition dictionaries
+            edges: List of edge definition dictionaries from React Flow JSON format
+                   Each edge has: source, target, sourceHandle (optional)
         """
         for edge in edges:
             source = edge.get("source")
             target = edge.get("target")
-            source_handle = edge.get("sourceHandle")
+            source_handle = edge.get("sourceHandle")  # Can be null, "Yes", "No", etc.
 
             if source and target:
+                # Normalize sourceHandle to lowercase key (null → "default", "Yes" → "yes", etc.)
+                # Multiple edges with same sourceHandle (or both null) will get same key
                 key = BranchKeyNormalizer.normalize_to_lowercase(source_handle)
 
                 try:
+                    # connect_nodes() calls WorkflowNode.add_next() which APPENDS to list
+                    # This is the key mechanism: multiple edges with same key create a list
                     self.graph.connect_nodes(source, target, key)
                 except ValueError as e:
                     logger.warning(
