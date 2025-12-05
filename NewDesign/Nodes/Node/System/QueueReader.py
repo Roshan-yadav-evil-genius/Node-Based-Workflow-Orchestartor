@@ -1,3 +1,4 @@
+from core.utils import node_type
 from ...Core import ProducerNode, NodeOutput, PoolType
 from storage.data_store import DataStore
 import structlog
@@ -41,5 +42,7 @@ class QueueReader(ProducerNode):
         
         # Pop data from queue (blocks indefinitely until data arrives)
         result = await data_store.pop(queue_name, timeout=0)
+
+        logger.info(f"Popped from queue",queue_name=queue_name, loop_id=self.loop_identifier, node_id=self.config.id, node_type=f"{node_type(self)}({self.identifier()})", loop_count=self.loop_count)
         
         return NodeOutput(**result)

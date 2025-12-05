@@ -26,17 +26,17 @@ class DataStore:
     - Queue operations use Redis Lists (LPUSH/BRPOP)
     - Cache operations use Redis Strings with optional TTL
     """
-    _instance = None
+    # _instance = None
     
-    def __new__(cls, host: str = "127.0.0.1", port: int = 6379,
-                db: int = 0, password: Optional[str] = None,
-                pool_size: int = 10):
-        """
-        Create or return existing singleton instance.
-        """
-        if cls._instance is None:
-            cls._instance = super(DataStore, cls).__new__(cls)
-        return cls._instance
+    # def __new__(cls, host: str = "127.0.0.1", port: int = 6379,
+    #             db: int = 0, password: Optional[str] = None,
+    #             pool_size: int = 10):
+    #     """
+    #     Create or return existing singleton instance.
+    #     """
+    #     if cls._instance is None:
+    #         cls._instance = super(DataStore, cls).__new__(cls)
+    #     return cls._instance
     
     def __init__(
         self,
@@ -137,9 +137,9 @@ class DataStore:
         serialized_data = self._serialize(data)
         
         try:
-            logger.info(f"Pushing data to queue",queue_key=queue_key, data=data)
+            logger.info(f"Pushing data to queue",queue_key=queue_key)
             await self._connection.lpush(queue_key, [serialized_data])
-            logger.info(f"Pushed to queue",queue_key=queue_key, data=data)
+            logger.info(f"Pushed to queue",queue_key=queue_key)
         except Exception as e:
             logger.error(
                 f"Failed to push to queue '{queue_name}': {e}",
@@ -165,7 +165,7 @@ class DataStore:
         """
         await self._ensure_connection()
         queue_key = self._queue_key(queue_name)
-        
+        logger.info(f"Popping from queue",queue_key=queue_key)
         try:
             # Convert timeout to integer seconds for Redis BRPOP
             # BRPOP timeout of 0 means return immediately, None means block indefinitely
@@ -186,7 +186,7 @@ class DataStore:
             # BRPOP returns BlockingPopReply object with value attribute
             serialized_data = result.value
             data = self._deserialize(serialized_data)
-            logger.info(f"Popped from queue",queue_key=queue_key, data=data)
+            logger.info(f"Popped from queue",queue_key=queue_key)
             return data
             
         except Exception as e:

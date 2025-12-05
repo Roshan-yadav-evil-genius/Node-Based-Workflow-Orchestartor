@@ -30,9 +30,6 @@ class LoopManager:
 
     async def start(self):
         self.running = True
-        logger.info(
-            "Starting loop (each node executes in its preferred pool)"
-        )
 
         while self.running:
             self.loop_count += 1

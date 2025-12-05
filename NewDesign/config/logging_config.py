@@ -72,14 +72,14 @@ def setup_logging():
 
     # File handler with JSON output and daily rotation (UTC)
     file_handler = TimedRotatingFileHandler(
-        filename=logs_dir / "workflow.jl",
+        filename=logs_dir / "workflow.jsonl",
         when="midnight",
         interval=1,
         backupCount=30,  # Keep 30 days of logs
         encoding="utf-8",
         utc=True,  # Use UTC for rotation
     )
-    file_handler.suffix = "%Y-%m-%d.jl"  # Creates workflow_2024-01-15.log
+    file_handler.suffix = "%Y-%m-%d.jsonl"  # Creates workflow_2024-01-15.log
     file_handler.setLevel(logging.DEBUG)
     file_formatter = structlog.stdlib.ProcessorFormatter(
         processor=structlog.processors.JSONRenderer(),

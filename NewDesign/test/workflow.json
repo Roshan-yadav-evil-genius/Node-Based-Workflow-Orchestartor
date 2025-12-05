@@ -44,11 +44,10 @@
     },
     {
       "id": "6",
-      "type": "cosine-similarity",
+      "type": "if-condition",
       "data": {
         "execution_pool": "async",
         "config": {
-          "threshold": 0.8
         }
       }
     },
