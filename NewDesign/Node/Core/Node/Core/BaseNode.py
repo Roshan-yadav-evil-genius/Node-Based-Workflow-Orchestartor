@@ -11,9 +11,10 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     use for type hinting and inheritance.
     """
     
-    def __init__(self, config: NodeConfig):
+    def __init__(self, config: Optional[NodeConfig] = None):
         self.config = config
-
+        self.form = self.get_form()
+        
 
     def ready(self) -> Dict[str, str]:
         """

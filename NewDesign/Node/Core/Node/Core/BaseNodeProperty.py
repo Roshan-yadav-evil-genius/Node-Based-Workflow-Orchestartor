@@ -65,7 +65,7 @@ class BaseNodeProperty(ABC):
         return ""
     
     @property
-    def form(self) -> Optional[BaseForm]:
+    def get_form(self) -> Optional[BaseForm]:
         """
         Get the associated form for this node.
         Default implementation returns None.
