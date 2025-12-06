@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
+from typing import Optional
 from .Data import NodeConfig, NodeOutput, PoolType
 from .BaseNodeProperty import BaseNodeProperty
 from .BaseNodeMethod import BaseNodeMethod
@@ -16,15 +16,18 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         self.form = self.get_form()
         
 
-    def ready(self) -> Dict[str, str]:
+    def ready(self) -> bool:
         """
         Validate that the node has all required config fields.
         
         Returns:
-            Dictionary mapping field names to error messages.
-            Empty dict if node is ready, non-empty dict if validation fails.
+            bool: True if node is ready (form is valid or None), False otherwise.
         """
-        return {}
+        if self.form is None:
+            return True
+        return self.form.is_valid()
+    
+    
 
 class NonBlockingNode(BaseNode, ABC):
     """

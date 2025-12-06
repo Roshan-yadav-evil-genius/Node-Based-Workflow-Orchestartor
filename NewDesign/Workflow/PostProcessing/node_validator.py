@@ -17,19 +17,20 @@ class NodeValidator(PostProcessor):
         """
         logger.info("Validating all nodes in workflow...")
         
-        errors_by_node = {}
+        failed_nodes = []
         for node_id, workflow_node in self.graph.node_map.items():
-            node_errors = workflow_node.instance.ready()
-            if node_errors:
-                errors_by_node[node_id] = node_errors
+            node = workflow_node.instance
+            if not node.ready():
+                # Get errors from form if available
+                if node.form is not None:
+                    errors = node.form.errors
+                    error_list = ', '.join(f"{k}: {v}" for k, v in errors.items())
+                    failed_nodes.append(f"Node '{node_id}': {error_list}")
+                else:
+                    failed_nodes.append(f"Node '{node_id}': validation failed")
         
-        if errors_by_node:
-            error_messages = []
-            for node_id, errors in errors_by_node.items():
-                error_list = ', '.join(errors.values())
-                error_messages.append(f"Node '{node_id}': {error_list}")
-            
-            error_text = "Workflow validation failed:\n" + "\n".join(error_messages)
+        if failed_nodes:
+            error_text = "Workflow validation failed:\n" + "\n".join(failed_nodes)
             logger.error(error_text)
             raise ValueError(error_text)
         
