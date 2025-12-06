@@ -7,9 +7,16 @@ class BaseNodeMethod(ABC):
     
     def setup(self):
         """
-        Before the Loop Manager starts the loop, the setup method is called.
+        setup method is not utlized directly but is called by init method.
         This method is used to initialize the node and set up any necessary resources.
         Default implementation does nothing.
+        """
+        pass
+
+    @abstractmethod
+    def init(self):
+        """
+        Before the Loop Manager starts the loop, the init method is called.
         """
         pass
 

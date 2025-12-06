@@ -24,6 +24,8 @@ class FlowRunner:
 
     async def start(self):
         self.running = True
+        self._init_nodes()
+        
         while self.running:
             self.loop_count += 1
             try:
@@ -63,3 +65,20 @@ class FlowRunner:
 
     def shutdown(self):
         self.executor.shutdown()
+
+    def _init_nodes(self):
+        """Initialize all nodes in the flow by calling their init() method."""
+        visited = set()
+        self._init_node_recursive(self.producer_flow_node, visited)
+
+    def _init_node_recursive(self, flow_node: FlowNode, visited: set):
+        """Recursively initialize a node and its downstream nodes."""
+        if flow_node.id in visited:
+            return
+        visited.add(flow_node.id)
+        
+        flow_node.instance.init()
+        
+        for branch_nodes in flow_node.next.values():
+            for next_node in branch_nodes:
+                self._init_node_recursive(next_node, visited)

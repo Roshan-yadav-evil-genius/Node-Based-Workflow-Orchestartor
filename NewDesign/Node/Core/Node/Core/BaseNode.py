@@ -11,12 +11,12 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     use for type hinting and inheritance.
     """
     
-    def __init__(self, config: Optional[NodeConfig] = None):
+    def __init__(self, config: NodeConfig):
         self.config = config
-        self.form = self.get_form()
+        self.form = self.get_form
         
 
-    def ready(self) -> bool:
+    def is_ready(self) -> bool:
         """
         Validate that the node has all required config fields.
         
@@ -27,7 +27,20 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
             return True
         return self.form.is_valid()
     
+    def init(self):
+        """
+        Initialize the node.
+        This method is called before calling execute method.
+        It is used to validate the node and set up any necessary resources.
+        Default implementation does nothing.
+        """
+
+        if not self.is_ready():
+            raise ValueError(f"Node {self.config.id} is not ready")
+        self.setup()
+
     
+
 
 class NonBlockingNode(BaseNode, ABC):
     """

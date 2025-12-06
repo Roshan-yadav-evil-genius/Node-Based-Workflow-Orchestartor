@@ -20,7 +20,7 @@ class NodeValidator(PostProcessor):
         failed_nodes = []
         for node_id, workflow_node in self.graph.node_map.items():
             node = workflow_node.instance
-            if not node.ready():
+            if not node.is_ready():
                 # Get errors from form if available
                 if node.form is not None:
                     errors = node.form.errors
