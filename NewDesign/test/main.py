@@ -22,3 +22,5 @@ if __name__ == "__main__":
 
     form.update_field('language', 'marathi1')  # Populates languages
     print(FormSerializer(form).to_json(),end="-"*20)
+
+    print(form.is_valid())
