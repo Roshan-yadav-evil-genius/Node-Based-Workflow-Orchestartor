@@ -1,6 +1,5 @@
-from ..Core.BaseForm import BaseForm
+from ...Core.Form.Core.BaseForm import BaseForm
 from django import forms
-
 # State data mapping for countries
 STATE_DATA = {
     "india": [
@@ -72,7 +71,7 @@ LANGUAGE_DATA = {
 }
 
 
-class TestingForm(BaseForm):
+class ContactForm(BaseForm):
     # subject = forms.CharField(max_length=100)
     COUNTRY_DATA=[
         ("india","India"),
