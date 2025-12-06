@@ -21,5 +21,5 @@ class PlaywrightFreelanceBidder(NonBlockingNode):
         logger.info(f"[{self.config.type}] Bid submitted!")
         return node_data
 
-    def form(self) -> BaseForm:
+    def get_form(self) -> BaseForm:
         return ContactForm()

@@ -13,7 +13,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     
     def __init__(self, config: NodeConfig):
         self.config = config
-        self.form = self.get_form
+        self.form = self.get_form()
         
 
     def is_ready(self) -> bool:

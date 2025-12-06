@@ -22,7 +22,7 @@ class NodeConfig(BaseModel):
     )
 
 
-class NodeOutPutMetaData(BaseModel):
+class NodeOutputMetaData(BaseModel):
     """
     Metadata for the node output.
     """
@@ -46,7 +46,7 @@ class NodeOutput(BaseModel):
     )
     data: Dict[str, Any] = Field(default_factory=dict, description="Main data payload")
 
-    metadata: Optional[Union[NodeOutPutMetaData, Dict[str, Any]]] = Field(
+    metadata: Optional[Union[NodeOutputMetaData, Dict[str, Any]]] = Field(
         default_factory=dict, description="Optional metadata"
     )
 

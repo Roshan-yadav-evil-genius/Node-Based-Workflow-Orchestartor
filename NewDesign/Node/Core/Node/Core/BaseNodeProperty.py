@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from .Data import PoolType
-from ...Form.Core.BaseForm import BaseForm
 
 
 class BaseNodeProperty(ABC):
@@ -63,14 +61,3 @@ class BaseNodeProperty(ABC):
             str: An icon identifier or path for displaying the node.
         """
         return ""
-    
-    @property
-    def get_form(self) -> Optional[BaseForm]:
-        """
-        Get the associated form for this node.
-        Default implementation returns None.
-
-        Returns:
-            BaseForm: An instance of the form corresponding to this node, or None.
-        """
-        return None
