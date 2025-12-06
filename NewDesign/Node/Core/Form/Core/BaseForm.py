@@ -1,9 +1,22 @@
+"""
+Base Form Module
+
+This module provides the base form class that combines Django's Form functionality
+with cascading field dependency support.
+
+Architecture (SRP-compliant):
+- BaseForm: Core form functionality (validation, field values, rebinding)
+- DependencyHandler: Manages field dependency cascading (separate class)
+- DependencyInjector: Interface for dependency configuration (abstract mixin)
+"""
+
 import django
 from django.conf import settings
 from django import forms
 from django.forms.forms import DeclarativeFieldsMetaclass
 from abc import ABCMeta
 from .DependencyInjector import DependencyInjector
+from .DependencyHandler import DependencyHandler
 
 # Configure Django settings
 if not settings.configured:
@@ -29,7 +42,10 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
     Base form class that provides cascading field dependency functionality.
     All forms with dependent fields should inherit from this class.
     
-    This class combines Django's Form with DependencyInjector mixin.
+    Architecture:
+    - This class handles: field values, validation, form rebinding
+    - DependencyHandler handles: cascading field dependencies
+    
     Child forms MUST implement:
     1. get_field_dependencies() - Returns mapping of parent fields to dependent fields
     2. populate_field(field_name, parent_value) - Returns choices for dependent field
@@ -38,7 +54,9 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._incremental_data = {}
-        self._initialize_dependent_fields()
+        # Initialize dependency handler (SRP: separate class for dependencies)
+        self._dependency_handler = DependencyHandler(self)
+        self._dependency_handler.initialize_dependencies()
     
     def _get_field_value(self, field_name):
         """
@@ -55,49 +73,6 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         elif field_name in self.initial:
             return self.initial.get(field_name)
         return None
-    
-    def _initialize_dependent_fields(self):
-        """
-        Initialize dependent fields based on parent field values.
-        This method automatically handles cascading dependencies.
-        """
-        dependencies = self.get_field_dependencies()
-        processed_fields = set()
-        
-        def process_field(field_name):
-            """Recursively process field and its dependencies."""
-            if field_name in processed_fields:
-                return
-            
-            field_value = self.get_field_value(field_name)
-            if field_value:
-                # Update dependent fields
-                self._update_dependent_field(field_name, field_value, dependencies)
-            
-            processed_fields.add(field_name)
-            
-            # Process dependent fields recursively
-            if field_name in dependencies:
-                for dependent_field in dependencies[field_name]:
-                    process_field(dependent_field)
-        
-        # Start processing from all parent fields (fields that have dependencies)
-        for parent_field in dependencies.keys():
-            process_field(parent_field)
-    
-    def _update_dependent_field(self, parent_field, parent_value, dependencies=None):
-        """
-        Update a dependent field based on parent field value.
-        Calls populate_field() which should be implemented by child classes.
-        """
-        if dependencies is None:
-            dependencies = self.get_field_dependencies()
-        
-        if parent_field in dependencies:
-            for dependent_field in dependencies[parent_field]:
-                choices = self.populate_field(dependent_field, parent_value)
-                if dependent_field in self.fields:
-                    self.fields[dependent_field].choices = choices
     
     def _update_incremental_data(self, field_name, value):
         """
@@ -128,45 +103,6 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         # Rebind the form with updated data
         self.data = updated_data
         self.is_bound = True
-    
-    def _clear_dependent_fields(self, parent_field, dependencies=None):
-        """
-        Clear child fields when parent changes.
-        Recursively clears all dependent fields in the dependency chain.
-        
-        Args:
-            parent_field: Name of the parent field that changed
-            dependencies: Optional dependencies dict (if None, calls get_field_dependencies())
-        """
-        if dependencies is None:
-            dependencies = self.get_field_dependencies()
-        
-        if parent_field in dependencies:
-            for dependent_field in dependencies[parent_field]:
-                # Clear the dependent field value
-                self._incremental_data.pop(dependent_field, None)
-                # Reset choices
-                if dependent_field in self.fields:
-                    self.fields[dependent_field].choices = []
-                # Recursively clear fields that depend on this dependent field
-                self._clear_dependent_fields(dependent_field, dependencies)
-    
-    def _handle_field_dependencies(self, field_name, value):
-        """
-        Handle cascading updates when parent fields change.
-        Single responsibility: Determine and trigger dependent field updates.
-        
-        Args:
-            field_name: Name of the field that was updated
-            value: New value of the field
-        """
-        dependencies = self.get_field_dependencies()
-        
-        if field_name in dependencies:
-            # Clear dependent fields first
-            self._clear_dependent_fields(field_name, dependencies)
-            # Update dependent fields
-            self._update_dependent_field(field_name, value, dependencies)
     
     def _is_value_changed(self, field_name, new_value):
         """
@@ -211,8 +147,8 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         
         # Only handle dependent fields and validate if value actually changed
         if value_changed:
-            # Handle dependent field updates
-            self._handle_field_dependencies(field_name, value)
+            # Delegate dependency handling to DependencyHandler (SRP)
+            self._dependency_handler.handle_field_change(field_name, value)
             # Validate the updated field
             self._validate_field(field_name)
     

@@ -18,16 +18,23 @@ class QueueReader(ProducerNode):
         """
         Execute the queue reader by popping data from the queue.
         
-        Uses DataStore singleton instance for queue operations. Blocks indefinitely until data is available.
+        Uses DataStore's queue service for queue operations.
+        Blocks indefinitely until data is available.
         """
         data_store = DataStore()
         
         # Extract queue name from node config (validated by NodeValidator)
         queue_name = self.config.data["queue_name"]
         
-        # Pop data from queue (blocks indefinitely until data arrives)
-        result = await data_store.pop(queue_name, timeout=0)
+        # Pop data from queue using the new SRP-compliant API
+        # (blocks indefinitely until data arrives)
+        result = await data_store.queue.pop(queue_name, timeout=0)
 
-        logger.info(f"Popped from queue",queue_name=queue_name, node_id=self.config.id, node_type=f"{node_type(self)}({self.identifier()})")
+        logger.info(
+            "Popped from queue",
+            queue_name=queue_name,
+            node_id=self.config.id,
+            node_type=f"{node_type(self)}({self.identifier()})"
+        )
         
         return NodeOutput(**result)
