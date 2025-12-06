@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.getcwd())
 
 from config.logging_config import setup_logging
-from Workflow.orchestrator import Workflow
+from Workflow.flow_engine import FlowEngine
 
 
 async def main():
@@ -24,7 +24,7 @@ async def main():
         return
 
     # 2. Initialize Orchestrator
-    orchestrator = Workflow()
+    orchestrator = FlowEngine()
 
     # 3. Load Workflow
     orchestrator.load_workflow(workflow_data)

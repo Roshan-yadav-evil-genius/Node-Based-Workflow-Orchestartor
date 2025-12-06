@@ -3,7 +3,7 @@ import structlog
 from Node.Core.Node.Core.BaseNode import BaseNode
 from Node.Nodes.System.QueueNode import QueueNode
 from Node.Nodes.System.QueueReader import QueueReader
-from ..workflow_node import WorkflowNode
+from ..flow_node import FlowNode
 from . import PostProcessor
 
 logger = structlog.get_logger(__name__)
@@ -88,14 +88,14 @@ class QueueMapper(PostProcessor):
         return f"queue_{source_id}_{target_id}"
 
     def _assign_queue_name(
-        self, source_node: WorkflowNode, target_node: WorkflowNode, queue_name: str
+        self, source_node: FlowNode, target_node: FlowNode, queue_name: str
     ) -> None:
         """
         Assign queue name to both source and target nodes' configs.
 
         Args:
-            source_node: WorkflowNode instance (QueueNode)
-            target_node: WorkflowNode instance (QueueReader)
+            source_node: FlowNode instance (QueueNode)
+            target_node: FlowNode instance (QueueReader)
             queue_name: Queue name to assign
         """
         # Ensure config.data exists for source node

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..graph import WorkflowGraph
+    from ..flow_graph import FlowGraph
 
 
 class PostProcessor(ABC):
@@ -11,12 +11,12 @@ class PostProcessor(ABC):
     Follows Single Responsibility Principle - each processor handles one concern.
     """
 
-    def __init__(self, graph: "WorkflowGraph"):
+    def __init__(self, graph: "FlowGraph"):
         """
-        Initialize PostProcessor with workflow graph.
+        Initialize PostProcessor with flow graph.
 
         Args:
-            graph: WorkflowGraph instance to process
+            graph: FlowGraph instance to process
         """
         self.graph = graph
 

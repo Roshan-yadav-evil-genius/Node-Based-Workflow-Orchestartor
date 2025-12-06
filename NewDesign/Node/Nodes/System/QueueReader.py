@@ -1,4 +1,4 @@
-from Workflow.utils import node_type
+from Workflow.flow_utils import node_type
 from ...Core.Node.Core import ProducerNode, NodeOutput, PoolType
 from Workflow.storage.data_store import DataStore
 import structlog

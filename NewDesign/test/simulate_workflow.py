@@ -7,7 +7,7 @@ sys.path.append(os.getcwd())
 
 import structlog
 from config.logging_config import setup_logging
-from Workflow.orchestrator import Workflow
+from Workflow.flow_engine import FlowEngine
 
 logger = structlog.get_logger(__name__)
 
@@ -17,11 +17,11 @@ async def main():
     
     try:
         # Load workflow.json from test folder
-        workflow_path = os.path.join(os.path.dirname(__file__), "workflow1.json")
+        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
         with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
             
-        orchestrator = Workflow()
+        orchestrator = FlowEngine()
         
         # Load and initialize workflow
         orchestrator.load_workflow(workflow_data)
@@ -36,9 +36,9 @@ async def main():
         await asyncio.sleep(20) # Run for 20 seconds
         
         logger.info("[Simulation] Stopping Simulation...")
-        # Stop all loops
-        for manager in orchestrator.loop_managers:
-            manager.stop()
+        # Stop all flows
+        for runner in orchestrator.flow_runners:
+            runner.stop()
             
         await simulation_task
         logger.info("[Simulation] Simulation Completed.")

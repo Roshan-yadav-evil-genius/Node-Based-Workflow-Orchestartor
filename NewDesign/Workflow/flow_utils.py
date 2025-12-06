@@ -1,5 +1,5 @@
 """
-Utility functions and classes for core workflow management.
+Utility functions and classes for flow management.
 """
 
 
@@ -65,8 +65,16 @@ class BranchKeyNormalizer:
         return capitalized or "default"
 
 
-def node_type( base_node_instance: BaseNode) -> Optional[str]:
-
+def node_type(base_node_instance: BaseNode) -> Optional[str]:
+    """
+    Get the type name of a BaseNode instance.
+    
+    Args:
+        base_node_instance: The node instance to check
+        
+    Returns:
+        The type name string or None if unknown
+    """
     if isinstance(base_node_instance, ProducerNode):
         return ProducerNode.__name__
     elif isinstance(base_node_instance, NonBlockingNode):
