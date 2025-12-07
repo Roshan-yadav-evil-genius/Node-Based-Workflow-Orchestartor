@@ -50,7 +50,7 @@ class FlowEngine:
         node = self.flow_graph.get_node_instance(node_id)
         if not node:
             raise ValueError(f"Node {node_id} not found")
-        result = await node.execute(previous_node_output=input_data)
+        result = await node.run(input_data)
         return result
 
     def load_workflow(self, workflow_json: Dict[str, Any]):

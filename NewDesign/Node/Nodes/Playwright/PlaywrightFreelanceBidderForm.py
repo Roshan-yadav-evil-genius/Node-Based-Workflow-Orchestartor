@@ -10,6 +10,6 @@ class PlaywrightFreelanceBidderForm(BaseForm):
     proposal = CharField(
         widget=Textarea(),
         help_text="Write a proposal for the project",
-        min_length=100,
+        # min_length=100,
         max_length=1000
     )

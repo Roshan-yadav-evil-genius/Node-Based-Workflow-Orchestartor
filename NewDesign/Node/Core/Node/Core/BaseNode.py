@@ -1,13 +1,24 @@
 from abc import ABC
 from typing import Optional
+import re
 
 import structlog
 from Node.Core.Form.Core.FormSerializer import FormSerializer
-from .Data import NodeConfig
+from .Data import NodeConfig, NodeOutput
 from .BaseNodeProperty import BaseNodeProperty
 from .BaseNodeMethod import BaseNodeMethod
 
 logger = structlog.get_logger(__name__)
+
+# Jinja template detection pattern
+JINJA_PATTERN = re.compile(r'\{\{.*?\}\}')
+
+
+def contains_jinja_template(value) -> bool:
+    """Check if a value contains Jinja template syntax."""
+    if value is None:
+        return False
+    return bool(JINJA_PATTERN.search(str(value)))
 
 class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     """
@@ -33,13 +44,55 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     def is_ready(self) -> bool:
         """
         Validate that the node has all required config fields.
+        For fields with Jinja templates, only checks if required fields have a value.
+        Full validation happens at runtime after template rendering.
         
         Returns:
-            bool: True if node is ready (form is valid or None), False otherwise.
+            bool: True if node is ready, False otherwise.
         """
         if self.form is None:
             return True
-        return self.form.is_valid()
+        return self._validate_template_fields()
+    
+    def _validate_template_fields(self) -> bool:
+        """
+        Validate form fields, handling Jinja templates specially.
+        For template fields: only check if required fields are not empty.
+        For non-template fields: perform full Django validation.
+        
+        Returns:
+            bool: True if validation passes, False otherwise.
+        """
+        if self.form is None:
+            return True
+        
+        # Clear any existing errors
+        self.form._errors = None
+        
+        form_data = self.node_config.data.form or {}
+        
+        for field_name, field in self.form.fields.items():
+            value = form_data.get(field_name)
+            
+            if contains_jinja_template(value):
+                # For template fields: only check required + not empty
+                if field.required and (value is None or str(value).strip() == ''):
+                    # Initialize errors if needed
+                    if self.form._errors is None:
+                        from django.forms.utils import ErrorDict
+                        self.form._errors = ErrorDict()
+                    self.form._errors[field_name] = self.form.error_class(['This field is required.'])
+            else:
+                # For non-template fields: perform normal field validation
+                try:
+                    field.clean(value)
+                except Exception as e:
+                    if self.form._errors is None:
+                        from django.forms.utils import ErrorDict
+                        self.form._errors = ErrorDict()
+                    self.form._errors[field_name] = self.form.error_class([str(e)])
+        
+        return not bool(self.form._errors)
     
     async def init(self):
         """
@@ -52,6 +105,59 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         if not self.is_ready():
             raise ValueError(f"Node {self.node_config.id} is not ready")
         await self.setup()
+    
+    def populate_form_values(self, node_data: NodeOutput) -> None:
+        """
+        Render Jinja templates in form fields with runtime data.
+        Called before execute() to populate form with actual values.
+        
+        Args:
+            node_data: The NodeOutput containing runtime data for template rendering.
+        
+        Raises:
+            ValueError: If form validation fails after rendering.
+        """
+        from jinja2 import Template
+        
+        if self.form is None:
+            return
+        
+        form_data = self.node_config.data.form or {}
+        
+        for field_name in self.form.fields:
+            raw_value = form_data.get(field_name)
+            if raw_value is not None and contains_jinja_template(str(raw_value)):
+                # Render the Jinja template with node data
+                template = Template(str(raw_value))
+                rendered_value = template.render(data=node_data.data)
+                self.form.update_field(field_name, rendered_value)
+                logger.debug(
+                    "Rendered template field",
+                    field=field_name,
+                    raw=raw_value,
+                    rendered=rendered_value,
+                    node_id=self.node_config.id
+                )
+        
+        # Validate form after rendering
+        if not self.form.is_valid():
+            raise ValueError(f"Form validation failed after rendering: {self.form.errors}")
+        else:
+            logger.info(f"Form validation passed", form=self.form.get_all_field_values(), node_id=self.node_config.id, identifier=f"{self.__class__.__name__}({self.identifier()})")
+            
+    async def run(self, node_data: NodeOutput) -> NodeOutput:
+        """
+        Main entry point for node execution.
+        Populates form values with runtime data, then executes the node.
+        
+        Args:
+            node_data: The NodeOutput from previous node.
+            
+        Returns:
+            NodeOutput: The result of node execution.
+        """
+        self.populate_form_values(node_data)
+        return await self.execute(node_data)
 
     
 

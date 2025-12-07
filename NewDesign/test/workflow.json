@@ -75,7 +75,7 @@
       "data": {
         "config": {},
         "form": {
-          "project_url": "https://www.freelancer.in/projects/{{data.project_details.path}}",
+          "project_url": "{{data.project_details.url}}",
           "bid_amount": "{{data.bid_amount}}",
           "estimated_delivery_days": "{{data.estimated_delivery_days}}",
           "proposal": "{{data.proposal}}"

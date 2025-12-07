@@ -22,7 +22,7 @@ class PoolExecutor:
     
     async def execute_in_pool(self, pool: PoolType, node: 'BaseNode', node_output: NodeOutput) -> NodeOutput:
         if pool == PoolType.ASYNC:
-            return await node.execute(node_output)
+            return await node.run(node_output)
         elif pool == PoolType.THREAD:
             return await self._execute_thread(node, node_output)
         elif pool == PoolType.PROCESS:
@@ -35,7 +35,7 @@ class PoolExecutor:
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
         try:
-            return new_loop.run_until_complete(node.execute(node_output))
+            return new_loop.run_until_complete(node.run(node_output))
         finally:
             new_loop.close()
     
@@ -52,7 +52,7 @@ class PoolExecutor:
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
         try:
-            result = new_loop.run_until_complete(node.execute(node_data))
+            result = new_loop.run_until_complete(node.run(node_data))
             return pickle.dumps(result)
         finally:
             new_loop.close()
