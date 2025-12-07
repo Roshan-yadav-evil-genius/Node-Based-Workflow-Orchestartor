@@ -290,6 +290,95 @@
             color: #ccc;
             margin-bottom: 15px;
         }
+        
+        /* Rendered Form Styles */
+        .form-tabs {
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .form-tabs .nav-link {
+            border: none;
+            color: #666;
+            padding: 12px 20px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .form-tabs .nav-link:hover {
+            color: #333;
+            border-color: #ccc;
+        }
+        .form-tabs .nav-link.active {
+            color: #667eea;
+            border-color: #667eea;
+            background: none;
+        }
+        .rendered-form {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 25px;
+        }
+        .form-field {
+            margin-bottom: 20px;
+        }
+        .form-field label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .form-field .form-help {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 4px;
+        }
+        .form-field .field-required {
+            color: #dc3545;
+            margin-left: 2px;
+        }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .form-field input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        .field-meta {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        .field-meta-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #f0f0f0;
+            color: #666;
+        }
+        .field-meta-badge.required {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .field-meta-badge.type {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
@@ -526,7 +615,7 @@
                 <div class="node-details-header">
                     <h4>${node.name || 'Unknown Node'}</h4>
                     <span class="badge bg-light text-dark">${node.type || 'Unknown Type'}</span>
-                    ${node.has_form ? '<span class="badge bg-success ms-2">Has Form</span>' : '<span class="badge bg-secondary ms-2">No Form</span>'}
+                    ${form ? '<span class="badge bg-success ms-2">Has Form</span>' : '<span class="badge bg-secondary ms-2">No Form</span>'}
                     <div class="node-meta">
                         <div class="node-meta-item">
                             <label>Identifier</label>
@@ -548,14 +637,32 @@
                 </div>
             `;
             
-            if (form) {
+            if (form && form.fields && form.fields.length > 0) {
                 html += `
-                    <h6 class="mb-3">
-                        <i class="bi bi-braces me-2"></i>
-                        Form JSON Schema
-                    </h6>
-                    <div class="json-container">
-                        <pre>${syntaxHighlight(JSON.stringify(form, null, 2))}</pre>
+                    <ul class="nav nav-tabs form-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="rendered-tab" data-bs-toggle="tab" data-bs-target="#rendered-pane" type="button" role="tab">
+                                <i class="bi bi-ui-checks me-2"></i>Rendered Form
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json-pane" type="button" role="tab">
+                                <i class="bi bi-braces me-2"></i>JSON Schema
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="rendered-pane" role="tabpanel">
+                            <div class="rendered-form">
+                                ${renderFormFields(form.fields)}
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="json-pane" role="tabpanel">
+                            <div class="json-container">
+                                <pre>${syntaxHighlight(JSON.stringify(form, null, 2))}</pre>
+                            </div>
+                        </div>
                     </div>
                 `;
             } else {
@@ -569,6 +676,76 @@
             }
             
             containerEl.innerHTML = html;
+        }
+        
+        function renderFormFields(fields) {
+            var html = '';
+            
+            fields.forEach(function(field) {
+                var fieldHtml = '<div class="form-field">';
+                
+                // Label
+                var label = field.label || field.name || 'Field';
+                var isRequired = field.required === true;
+                fieldHtml += '<label>' + escapeHtml(label);
+                if (isRequired) {
+                    fieldHtml += '<span class="field-required">*</span>';
+                }
+                fieldHtml += '</label>';
+                
+                // Render input based on tag type
+                if (field.tag === 'select' && field.options) {
+                    fieldHtml += '<select class="form-select">';
+                    field.options.forEach(function(opt) {
+                        var selected = opt.selected ? ' selected' : '';
+                        fieldHtml += '<option value="' + escapeHtml(opt.value) + '"' + selected + '>' + escapeHtml(opt.text) + '</option>';
+                    });
+                    fieldHtml += '</select>';
+                } else if (field.tag === 'textarea') {
+                    fieldHtml += '<textarea rows="3" placeholder="' + escapeHtml(field.placeholder || '') + '"></textarea>';
+                } else if (field.type === 'checkbox') {
+                    fieldHtml += '<div><input type="checkbox"> <span>' + escapeHtml(label) + '</span></div>';
+                } else {
+                    var inputType = field.type || 'text';
+                    if (inputType === 'number') {
+                        var min = field.min !== undefined ? ' min="' + field.min + '"' : '';
+                        var max = field.max !== undefined ? ' max="' + field.max + '"' : '';
+                        fieldHtml += '<input type="number"' + min + max + ' placeholder="' + escapeHtml(field.placeholder || '') + '">';
+                    } else {
+                        fieldHtml += '<input type="' + inputType + '" placeholder="' + escapeHtml(field.placeholder || '') + '">';
+                    }
+                }
+                
+                // Field metadata badges
+                fieldHtml += '<div class="field-meta">';
+                if (isRequired) {
+                    fieldHtml += '<span class="field-meta-badge required">Required</span>';
+                }
+                if (field.type) {
+                    fieldHtml += '<span class="field-meta-badge type">' + escapeHtml(field.type) + '</span>';
+                }
+                if (field.tag) {
+                    fieldHtml += '<span class="field-meta-badge">' + escapeHtml(field.tag) + '</span>';
+                }
+                fieldHtml += '</div>';
+                
+                // Help text
+                if (field.help_text) {
+                    fieldHtml += '<div class="form-help">' + escapeHtml(field.help_text) + '</div>';
+                }
+                
+                fieldHtml += '</div>';
+                html += fieldHtml;
+            });
+            
+            return html;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         // JSON syntax highlighting
