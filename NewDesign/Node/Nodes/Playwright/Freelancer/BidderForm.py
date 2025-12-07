@@ -1,9 +1,9 @@
-from ...Core.Form.Core.BaseForm import BaseForm
+from ....Core.Form.Core.BaseForm import BaseForm
 from django.forms import IntegerField, URLField, FloatField, CharField
 from django.forms.widgets import Textarea
 
 
-class PlaywrightFreelanceBidderForm(BaseForm):
+class BidderForm(BaseForm):
     project_url = URLField()
     bid_amount = FloatField()
     estimated_delivery_days = IntegerField(help_text="No of days to complete the project")

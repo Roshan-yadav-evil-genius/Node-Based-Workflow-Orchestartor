@@ -122,8 +122,8 @@ def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, List[Dict]]
         
         category_nodes = []
         
-        # Scan all Python files in this category
-        for py_file in category_dir.glob('*.py'):
+        # Scan all Python files in this category (recursively)
+        for py_file in category_dir.rglob('*.py'):
             # Skip __init__.py
             if py_file.name == '__init__.py':
                 continue

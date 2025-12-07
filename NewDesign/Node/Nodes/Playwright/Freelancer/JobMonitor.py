@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict
-from ...Core.Node.Core import ProducerNode, NodeOutput, PoolType
+from ....Core.Node.Core import ProducerNode, NodeOutput, PoolType
 import asyncio
 import structlog
 import uuid
@@ -11,7 +11,7 @@ import aiofiles
 
 logger = structlog.get_logger(__name__)
 
-class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
+class JobMonitor(ProducerNode):
     @classmethod
     def identifier(cls) -> str:
         return "playwright-freelance-job-monitor-producer"
