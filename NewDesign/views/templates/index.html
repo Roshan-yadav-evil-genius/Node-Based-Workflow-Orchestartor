@@ -207,6 +207,89 @@
             color: #666;
         }
         .stat-item strong { color: #333; }
+        
+        /* Node item clickable style */
+        .node-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .node-item:hover {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        
+        /* JSON Modal styles */
+        .json-modal .modal-dialog {
+            max-width: 800px;
+        }
+        .json-modal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .json-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .json-container pre {
+            color: #d4d4d4;
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .node-details-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .node-details-header h4 {
+            margin: 0 0 10px 0;
+        }
+        .node-details-header .badge {
+            font-size: 0.85rem;
+        }
+        .node-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .node-meta-item {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        .node-meta-item label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 2px;
+            display: block;
+        }
+        .node-meta-item span {
+            font-weight: 500;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        .no-form-message {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        .no-form-message i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -223,18 +306,19 @@
     {% macro render_folder_content(folder_data, prefix, depth=0) %}
         {# Render nodes directly in this folder #}
         {% for node in folder_data.nodes %}
-        <div class="node-item" style="padding-left: {{ 20 + depth * 20 }}px;">
+        <div class="node-item" style="padding-left: {{ 20 + depth * 20 }}px;" onclick="showNodeDetails('{{ node.identifier }}')">
             <div class="node-icon {{ node.type|lower|replace('node', '') }}">
                 <i class="bi bi-box"></i>
             </div>
             <div class="node-info">
                 <div class="node-name">
                     {{ node.name }}
-                    <i class="bi bi-info-circle-fill info-icon" title="Type: {{ node.type }}"></i>
+                    <i class="bi bi-info-circle-fill info-icon" title="Click to view form JSON"></i>
                 </div>
                 <div class="node-identifier">identifier: {{ node.identifier }}</div>
             </div>
             <span class="type-badge">{{ node.type }}</span>
+            <i class="bi bi-chevron-right text-muted"></i>
         </div>
         {% endfor %}
 
@@ -343,7 +427,7 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Add Node Modal -->
     <div class="modal fade" id="nodeModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -372,14 +456,141 @@
         </div>
     </div>
 
+    <!-- Node Details/JSON Modal -->
+    <div class="modal fade json-modal" id="nodeDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-code-slash me-2"></i>
+                        Node Form Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="nodeDetailsContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var tooltips = [].slice.call(document.querySelectorAll('[title]'));
         tooltips.forEach(function(el) { new bootstrap.Tooltip(el); });
         
         function selectNode(id, name) {
-            alert('Selected: ' + name + ' (' + id + ')');
+            // Show node details when selecting from Add Node modal
+            showNodeDetails(id);
             bootstrap.Modal.getInstance(document.getElementById('nodeModal')).hide();
+        }
+        
+        function showNodeDetails(identifier) {
+            var modal = new bootstrap.Modal(document.getElementById('nodeDetailsModal'));
+            var contentEl = document.getElementById('nodeDetailsContent');
+            
+            // Show loading state
+            contentEl.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            modal.show();
+            
+            // Fetch node form data
+            fetch('/api/node/' + encodeURIComponent(identifier) + '/form')
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    renderNodeDetails(data, contentEl);
+                })
+                .catch(function(error) {
+                    contentEl.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Error loading node details: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+        
+        function renderNodeDetails(data, containerEl) {
+            var node = data.node || {};
+            var form = data.form;
+            
+            var html = `
+                <div class="node-details-header">
+                    <h4>${node.name || 'Unknown Node'}</h4>
+                    <span class="badge bg-light text-dark">${node.type || 'Unknown Type'}</span>
+                    ${node.has_form ? '<span class="badge bg-success ms-2">Has Form</span>' : '<span class="badge bg-secondary ms-2">No Form</span>'}
+                    <div class="node-meta">
+                        <div class="node-meta-item">
+                            <label>Identifier</label>
+                            <span>${node.identifier || '-'}</span>
+                        </div>
+                        <div class="node-meta-item">
+                            <label>Label</label>
+                            <span>${node.label || '-'}</span>
+                        </div>
+                        <div class="node-meta-item">
+                            <label>Description</label>
+                            <span>${node.description || '-'}</span>
+                        </div>
+                        <div class="node-meta-item">
+                            <label>Form Class</label>
+                            <span>${node.form_class || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (form) {
+                html += `
+                    <h6 class="mb-3">
+                        <i class="bi bi-braces me-2"></i>
+                        Form JSON Schema
+                    </h6>
+                    <div class="json-container">
+                        <pre>${syntaxHighlight(JSON.stringify(form, null, 2))}</pre>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="no-form-message">
+                        <i class="bi bi-file-earmark-x d-block"></i>
+                        <h5>No Form Configuration</h5>
+                        <p class="text-muted mb-0">${data.message || 'This node does not have a form definition.'}</p>
+                    </div>
+                `;
+            }
+            
+            containerEl.innerHTML = html;
+        }
+        
+        // JSON syntax highlighting
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'color: #b5cea8;'; // number
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'color: #9cdcfe;'; // key
+                        match = match.replace(/"/g, '');
+                        match = '"' + match;
+                    } else {
+                        cls = 'color: #ce9178;'; // string
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'color: #569cd6;'; // boolean
+                } else if (/null/.test(match)) {
+                    cls = 'color: #569cd6;'; // null
+                }
+                return '<span style="' + cls + '">' + match + '</span>';
+            });
         }
     </script>
 </body>

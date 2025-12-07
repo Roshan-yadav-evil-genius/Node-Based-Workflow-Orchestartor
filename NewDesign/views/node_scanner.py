@@ -16,9 +16,9 @@ NODE_BASE_TYPES = {
 }
 
 
-def extract_identifier_from_method(node: ast.FunctionDef) -> Optional[str]:
+def extract_string_from_return(node: ast.FunctionDef) -> Optional[str]:
     """
-    Extract the return value from an identifier() classmethod.
+    Extract the string return value from a method.
     """
     for stmt in node.body:
         if isinstance(stmt, ast.Return) and stmt.value:
@@ -27,10 +27,40 @@ def extract_identifier_from_method(node: ast.FunctionDef) -> Optional[str]:
     return None
 
 
+def extract_form_class_name(class_node: ast.ClassDef) -> Optional[str]:
+    """
+    Extract form class name from get_form() method.
+    Looks for: return FormClassName()
+    """
+    for item in class_node.body:
+        if isinstance(item, ast.FunctionDef) and item.name == 'get_form':
+            for stmt in item.body:
+                if isinstance(stmt, ast.Return) and stmt.value:
+                    # Handle: return FormClass()
+                    if isinstance(stmt.value, ast.Call):
+                        if isinstance(stmt.value.func, ast.Name):
+                            return stmt.value.func.id
+    return None
+
+
+def extract_property_string(class_node: ast.ClassDef, prop_name: str) -> Optional[str]:
+    """
+    Extract a string value from a property definition.
+    Handles both @property decorated methods and simple return statements.
+    """
+    for item in class_node.body:
+        if isinstance(item, ast.FunctionDef) and item.name == prop_name:
+            # Check if it's a property (has @property decorator)
+            for decorator in item.decorator_list:
+                if isinstance(decorator, ast.Name) and decorator.id == 'property':
+                    return extract_string_from_return(item)
+    return None
+
+
 def extract_class_metadata(class_node: ast.ClassDef) -> Optional[Dict]:
     """
     Extract metadata from a class definition.
-    Returns dict with name, identifier, and base type.
+    Returns dict with name, identifier, base type, form info, and properties.
     """
     # Get base class names
     base_names = []
@@ -54,13 +84,24 @@ def extract_class_metadata(class_node: ast.ClassDef) -> Optional[Dict]:
     identifier = None
     for item in class_node.body:
         if isinstance(item, ast.FunctionDef) and item.name == 'identifier':
-            identifier = extract_identifier_from_method(item)
+            identifier = extract_string_from_return(item)
             break
+    
+    # Extract form class name
+    form_class = extract_form_class_name(class_node)
+    
+    # Extract label and description properties
+    label = extract_property_string(class_node, 'label')
+    description = extract_property_string(class_node, 'description')
     
     return {
         'name': class_node.name,
         'identifier': identifier or class_node.name.lower(),
-        'type': node_type
+        'type': node_type,
+        'has_form': form_class is not None,
+        'form_class': form_class,
+        'label': label,
+        'description': description
     }
 
 
