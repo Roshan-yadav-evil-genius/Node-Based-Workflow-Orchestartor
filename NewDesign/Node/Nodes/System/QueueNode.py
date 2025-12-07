@@ -14,18 +14,20 @@ class QueueNode(NonBlockingNode):
     def execution_pool(self) -> PoolType:
         return PoolType.ASYNC
 
+    async def setup(self):
+        """Initialize the DataStore connection once during node setup."""
+        self.data_store = DataStore()
+
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """
         Execute the queue node by pushing data to the queue.
         
         Uses DataStore's queue service for queue operations.
         """
-        data_store = DataStore()
-        
         # Extract queue name from node config (validated by NodeValidator)
         queue_name = self.node_config.data.config["queue_name"]
         
         # Push data to queue using the new SRP-compliant API
-        await data_store.queue.push(queue_name, node_data.to_dict())
+        await self.data_store.queue.push(queue_name, node_data.to_dict())
         
         return node_data

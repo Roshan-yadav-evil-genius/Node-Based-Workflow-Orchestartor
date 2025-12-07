@@ -58,6 +58,18 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         self._dependency_handler = DependencyHandler(self)
         self._dependency_handler.initialize_dependencies()
     
+    def get_field_dependencies(self):
+        """
+        REQUIRED: Define which fields depend on which parent fields.
+        """
+        pass
+
+    def populate_field(self, field_name, parent_value):
+        """
+        REQUIRED: Provide choices for dependent fields based on parent value.
+        """
+        return []
+    
     def _get_field_value(self, field_name):
         """
         Helper method to get field value from data (bound forms) or initial (unbound forms).

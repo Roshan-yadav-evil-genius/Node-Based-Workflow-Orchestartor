@@ -41,8 +41,7 @@
       "id": "6",
       "type": "if-condition",
       "data": {
-        "config": {
-        }
+        "config": {}
       }
     },
     {
@@ -76,9 +75,10 @@
       "data": {
         "config": {},
         "form": {
-          "country": "india",
-          "state": "maharashtra",
-          "language": "marathi"
+          "project_url": "https://www.freelancer.in/projects/{{data.project_details.path}}",
+          "bid_amount": "{{data.bid_amount}}",
+          "estimated_delivery_days": "{{data.estimated_delivery_days}}",
+          "proposal": "{{data.proposal}}"
         }
       }
     },
@@ -104,6 +104,11 @@
       "data": {
         "config": {
           "group_id": "freelance_jobs_group"
+        },
+        "form": {
+          "country": "india",
+          "state": "maharashtra",
+          "language": "marathi"
         }
       }
     },
@@ -209,5 +214,3 @@
     }
   ]
 }
-
-

@@ -1,3 +1,5 @@
+from Node.Core.Form.Core.BaseForm import BaseForm
+from Node.Nodes.Telegram.FormTesting import FormTesting
 from ...Core.Node.Core import BlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
@@ -18,3 +20,6 @@ class TelegramSender(BlockingNode):
         logger.info(f"[{self.node_config.type}] Sending Telegram notification...")
         await asyncio.sleep(0.4)
         return node_data
+
+    def get_form(self) -> BaseForm:
+        return FormTesting()

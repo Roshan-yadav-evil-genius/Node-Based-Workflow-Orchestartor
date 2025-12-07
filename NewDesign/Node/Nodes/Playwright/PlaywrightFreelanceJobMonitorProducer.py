@@ -5,6 +5,9 @@ import asyncio
 import structlog
 import uuid
 import random
+import json
+from pathlib import Path
+import aiofiles
 
 logger = structlog.get_logger(__name__)
 
@@ -17,10 +20,15 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
     def execution_pool(self) -> PoolType:
         return PoolType.ASYNC
 
-    async def execute(self, node_data: NodeOutput) -> NodeOutput:
+    async def setup(self):
+        jobs_file = Path(__file__).parent / "jobs.jl"
+        async with aiofiles.open(jobs_file, 'r', encoding='utf-8') as f:
+            lines = await f.readlines()
+            self._job_lines = [json.loads(line) for line in lines if line.strip()]
 
+    async def execute(self, node_data: NodeOutput) -> NodeOutput:
         await asyncio.sleep(2) # Simulate delay
-        job_data = self.get_job_data()
+        job_data = {"project_details": self.get_job_data()}
 
         return NodeOutput(
             id=self.node_config.id,
@@ -29,18 +37,4 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         )
     
     def get_job_data(self) -> Dict[str, Any]:
-        job_title = random.choice(["Python Developer", "React Developer", "Data Scientist", "Java Engineer", "Python Fullstack Developer", "React Fullstack Developer", "Data Science Fullstack Developer", "Java Fullstack Developer"])
-        job_descript = random.choice(["We are looking for a Python Developer with 3 years of experience in Django and Flask.", "We are looking for a React Developer with 2 years of experience in React and React Native.", "We are looking for a Data Scientist with 5 years of experience in data analysis and machine learning.", "We are looking for a Java Engineer with 4 years of experience in Spring Boot and Hibernate."])
-        job_budget = random.randint(100, 1000)
-        job_posting_date = datetime.now().strftime("%Y-%m-%d")
-        job_location = random.choice(["Remote", "On-site", "Hybrid"])
-
-        job_data = {
-            "job_id": str(uuid.uuid4()),
-            "job_title": job_title,
-            "description": job_descript,
-            "budget": job_budget,
-            "posting_date": job_posting_date,
-            "location": job_location
-        }
-        return job_data
+        return random.choice(self._job_lines)

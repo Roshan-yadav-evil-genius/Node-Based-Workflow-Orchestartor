@@ -41,7 +41,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
             return True
         return self.form.is_valid()
     
-    def init(self):
+    async def init(self):
         """
         Initialize the node.
         This method is called before calling execute method.
@@ -51,7 +51,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
 
         if not self.is_ready():
             raise ValueError(f"Node {self.node_config.id} is not ready")
-        self.setup()
+        await self.setup()
 
     
 
