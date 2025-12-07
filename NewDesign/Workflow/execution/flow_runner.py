@@ -30,8 +30,21 @@ class FlowRunner:
             self.loop_count += 1
             try:
                 producer = self.producer_flow_node.instance
+                logger.info(
+                    "Starting node execution",
+                    node_id=self.producer_flow_node.id,
+                    node_type=f"{producer.__class__.__name__}({producer.identifier()})",
+                    loop_count=self.loop_count
+                )
                 data = await self.executor.execute_in_pool(
                     producer.execution_pool, producer, NodeOutput(data={})
+                )
+                logger.info(
+                    "Node execution completed",
+                    node_id=self.producer_flow_node.id,
+                    node_type=f"{producer.__class__.__name__}({producer.identifier()})",
+                    output=data.data if data else None,
+                    loop_count=self.loop_count
                 )
                 
                 current = self.producer_flow_node
@@ -47,8 +60,22 @@ class FlowRunner:
                     
                     next_flow_node = next_list[0]
                     next_instance = next_flow_node.instance
+                    logger.info(
+                        "Starting node execution",
+                        node_id=next_flow_node.id,
+                        node_type=f"{next_instance.__class__.__name__}({next_instance.identifier()})",
+                        branch_key=branch_key,
+                        loop_count=self.loop_count
+                    )
                     data = await self.executor.execute_in_pool(
                         next_instance.execution_pool, next_instance, data
+                    )
+                    logger.info(
+                        "Node execution completed",
+                        node_id=next_flow_node.id,
+                        node_type=f"{next_instance.__class__.__name__}({next_instance.identifier()})",
+                        output=data.data if data else None,
+                        loop_count=self.loop_count
                     )
                     
                     if isinstance(next_instance, NonBlockingNode):
@@ -57,7 +84,7 @@ class FlowRunner:
                     current = next_flow_node
 
             except Exception as e:
-                logger.exception("Error in loop", error=str(e))
+                logger.exception("Error in loop", error=str(e), loop_count=self.loop_count)
                 await asyncio.sleep(1)
 
     def stop(self):

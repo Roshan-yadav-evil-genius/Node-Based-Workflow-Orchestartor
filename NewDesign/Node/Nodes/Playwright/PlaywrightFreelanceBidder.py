@@ -16,9 +16,7 @@ class PlaywrightFreelanceBidder(NonBlockingNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.node_config.type}] Submitting bid via Playwright...")
         await asyncio.sleep(1.5)
-        logger.info(f"[{self.node_config.type}] Bid submitted!")
         return node_data
 
     def get_form(self) -> BaseForm:
