@@ -24,7 +24,7 @@ class QueueReader(ProducerNode):
         data_store = DataStore()
         
         # Extract queue name from node config (validated by NodeValidator)
-        queue_name = self.config.data["queue_name"]
+        queue_name = self.node_config.data.config["queue_name"]
         
         # Pop data from queue using the new SRP-compliant API
         # (blocks indefinitely until data arrives)
@@ -33,7 +33,7 @@ class QueueReader(ProducerNode):
         logger.info(
             "Popped from queue",
             queue_name=queue_name,
-            node_id=self.config.id,
+            node_id=self.node_config.id,
             node_type=f"{node_type(self)}({self.identifier()})"
         )
         

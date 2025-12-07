@@ -1,5 +1,5 @@
+from Node.Nodes.Playwright.PlaywrightFreelanceBidderForm import PlaywrightFreelanceBidderForm
 from ...Core.Form.Core.BaseForm import BaseForm
-from .PlaceNodeForm import ContactForm
 from ...Core.Node.Core import NonBlockingNode, NodeOutput, PoolType
 import asyncio
 import structlog
@@ -16,10 +16,11 @@ class PlaywrightFreelanceBidder(NonBlockingNode):
         return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
-        logger.info(f"[{self.config.type}] Submitting bid via Playwright...")
+        logger.info(f"[{self.node_config.type}] Submitting bid via Playwright...")
         await asyncio.sleep(1.5)
-        logger.info(f"[{self.config.type}] Bid submitted!")
+        logger.info(f"[{self.node_config.type}] Bid submitted!")
         return node_data
 
     def get_form(self) -> BaseForm:
-        return ContactForm()
+        return PlaywrightFreelanceBidderForm()
+        # TODO: Impliment the way to populate the self.form with the data

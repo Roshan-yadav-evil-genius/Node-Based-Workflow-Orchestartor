@@ -71,7 +71,7 @@ LANGUAGE_DATA = {
 }
 
 
-class ContactForm(BaseForm):
+class PlaywrightFreelanceBidderForm(BaseForm):
     # subject = forms.CharField(max_length=100)
     COUNTRY_DATA=[
         ("india","India"),

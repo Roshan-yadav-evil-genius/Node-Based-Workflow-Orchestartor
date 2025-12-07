@@ -169,6 +169,12 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         # Fall back to regular field value retrieval
         return self._get_field_value(field_name)
     
+    def get_all_field_values(self):
+        """
+        Get all field values from the form.
+        """
+        return {field_name: self.get_field_value(field_name) for field_name in self.fields}
+    
     def _validate_field(self, field_name):
         """
         Validate a single field.

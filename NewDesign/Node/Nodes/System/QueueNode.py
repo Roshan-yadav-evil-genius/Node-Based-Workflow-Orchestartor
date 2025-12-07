@@ -23,7 +23,7 @@ class QueueNode(NonBlockingNode):
         data_store = DataStore()
         
         # Extract queue name from node config (validated by NodeValidator)
-        queue_name = self.config.data["queue_name"]
+        queue_name = self.node_config.data.config["queue_name"]
         
         # Push data to queue using the new SRP-compliant API
         await data_store.queue.push(queue_name, node_data.to_dict())

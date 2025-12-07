@@ -146,3 +146,4 @@ class DependencyHandler:
                 # Update the field's choices
                 if dependent_field in self._form.fields:
                     self._form.fields[dependent_field].choices = choices
+

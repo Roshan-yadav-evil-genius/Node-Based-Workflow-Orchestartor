@@ -9,6 +9,16 @@ class PoolType(Enum):
     THREAD = "THREAD"
     PROCESS = "PROCESS"
 
+class NodeConfigData(BaseModel):
+    """
+    Data for the node config.
+    """
+    form: Dict[str, Any] = Field(
+        default=None, description="Form data for the node"
+    )
+    config: Dict[str, Any] = Field(
+        default=None, description="Config data for the node"
+    )
 
 class NodeConfig(BaseModel):
     """
@@ -17,8 +27,8 @@ class NodeConfig(BaseModel):
 
     id: str = Field(..., description="Unique identifier for the node")
     type: str = Field(..., description="Human-readable name for the node")
-    data: Optional[Dict[str, Any]] = Field(
-        default=None, description="Form data for the node"
+    data: NodeConfigData = Field(
+        default=None, description="Data for the node"
     )
 
 

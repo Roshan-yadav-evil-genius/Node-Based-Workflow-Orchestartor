@@ -4,7 +4,6 @@
       "id": "1",
       "type": "playwright-freelance-job-monitor-producer",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -12,7 +11,6 @@
       "id": "2",
       "type": "if-condition",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -20,7 +18,6 @@
       "id": "3",
       "type": "store-node",
       "data": {
-        "execution_pool": "async",
         "config": {
           "store_name": "job_store"
         }
@@ -30,7 +27,6 @@
       "id": "4",
       "type": "store-reader",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -38,7 +34,6 @@
       "id": "5",
       "type": "ai-ml-scoring",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -46,7 +41,6 @@
       "id": "6",
       "type": "if-condition",
       "data": {
-        "execution_pool": "async",
         "config": {
         }
       }
@@ -55,7 +49,6 @@
       "id": "7",
       "type": "queue-node-dummy",
       "data": {
-        "execution_pool": "async",
         "config": {
           "queue_name": "high_score_jobs"
         }
@@ -65,7 +58,6 @@
       "id": "8",
       "type": "queue-reader-dummy",
       "data": {
-        "execution_pool": "async",
         "config": {
           "queue_name": "high_score_jobs"
         }
@@ -75,7 +67,6 @@
       "id": "9",
       "type": "llm-proposal-preparer",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -83,15 +74,18 @@
       "id": "10",
       "type": "playwright-freelance-bidder",
       "data": {
-        "execution_pool": "async",
-        "config": {}
+        "config": {},
+        "form": {
+          "country": "india",
+          "state": "maharashtra",
+          "language": "marathi"
+        }
       }
     },
     {
       "id": "11",
       "type": "db-node",
       "data": {
-        "execution_pool": "async",
         "config": {
           "table_name": "jobs"
         }
@@ -101,7 +95,6 @@
       "id": "12",
       "type": "query-db",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     },
@@ -109,7 +102,6 @@
       "id": "13",
       "type": "telegram-sender",
       "data": {
-        "execution_pool": "async",
         "config": {
           "group_id": "freelance_jobs_group"
         }
@@ -119,7 +111,6 @@
       "id": "14",
       "type": "db-status-updater",
       "data": {
-        "execution_pool": "async",
         "config": {}
       }
     }

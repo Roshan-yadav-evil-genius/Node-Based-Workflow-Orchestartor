@@ -23,9 +23,9 @@ class PlaywrightFreelanceJobMonitorProducer(ProducerNode):
         job_data = self.get_job_data()
 
         return NodeOutput(
-            id=self.config.id,
+            id=self.node_config.id,
             data=job_data,
-            metadata={"sourceNodeID": self.config.id,"sourceNodeName": self.config.type}
+            metadata={"sourceNodeID": self.node_config.id,"sourceNodeName": self.node_config.type}
         )
     
     def get_job_data(self) -> Dict[str, Any]:

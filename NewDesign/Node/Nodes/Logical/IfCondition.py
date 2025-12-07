@@ -23,7 +23,7 @@ class IfCondition(LogicalNode):
         self.set_output(random.random() < 0.5)
         
         return NodeOutput(
-            id=self.config.id,
+            id=self.node_config.id,
             data=node_data.data,
             metadata=node_data.metadata
         )

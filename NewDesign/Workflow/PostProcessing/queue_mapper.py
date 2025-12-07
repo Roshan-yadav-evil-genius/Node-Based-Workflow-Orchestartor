@@ -1,6 +1,7 @@
 from typing import Optional
 import structlog
 from Node.Core.Node.Core.BaseNode import BaseNode
+from Node.Core.Node.Core.Data import NodeConfigData
 from Node.Nodes.System.QueueNode import QueueNode
 from Node.Nodes.System.QueueReader import QueueReader
 from ..flow_node import FlowNode
@@ -99,16 +100,20 @@ class QueueMapper(PostProcessor):
             queue_name: Queue name to assign
         """
         # Ensure config.data exists for source node
-        if source_node.instance.config.data is None:
-            source_node.instance.config.data = {}
+        if source_node.instance.node_config.data is None:
+            source_node.instance.node_config.data = NodeConfigData()
+        if source_node.instance.node_config.data.config is None:
+            source_node.instance.node_config.data.config = {}
 
         # Ensure config.data exists for target node
-        if target_node.instance.config.data is None:
-            target_node.instance.config.data = {}
+        if target_node.instance.node_config.data is None:
+            target_node.instance.node_config.data = NodeConfigData()
+        if target_node.instance.node_config.data.config is None:
+            target_node.instance.node_config.data.config = {}
 
         # Only assign if not already set or is "default"
-        if source_node.instance.config.data.get("queue_name") in (None, "default"):
-            source_node.instance.config.data["queue_name"] = queue_name
+        if source_node.instance.node_config.data.config.get("queue_name") in (None, "default"):
+            source_node.instance.node_config.data.config["queue_name"] = queue_name
 
-        if target_node.instance.config.data.get("queue_name") in (None, "default"):
-            target_node.instance.config.data["queue_name"] = queue_name
+        if target_node.instance.node_config.data.config.get("queue_name") in (None, "default"):
+            target_node.instance.node_config.data.config["queue_name"] = queue_name

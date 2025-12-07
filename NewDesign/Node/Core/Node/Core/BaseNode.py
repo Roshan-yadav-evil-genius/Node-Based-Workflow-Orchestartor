@@ -1,8 +1,13 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Optional
-from .Data import NodeConfig, NodeOutput, PoolType
+
+import structlog
+from Node.Core.Form.Core.FormSerializer import FormSerializer
+from .Data import NodeConfig
 from .BaseNodeProperty import BaseNodeProperty
 from .BaseNodeMethod import BaseNodeMethod
+
+logger = structlog.get_logger(__name__)
 
 class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     """
@@ -11,10 +16,19 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
     use for type hinting and inheritance.
     """
     
-    def __init__(self, config: NodeConfig):
-        self.config = config
+    def __init__(self, node_config: NodeConfig):
+        self.node_config = node_config
         self.form = self.get_form()
-        
+        self._populate_form()
+    
+    def _populate_form(self):
+        """
+        Populate the form with the data from the config.
+        """
+        if self.form is not None:
+            for key, value in self.node_config.data.form.items():
+                self.form.update_field(key, value)
+            logger.info(f"Form Populated", form=self.form.get_all_field_values(), node_id=self.node_config.id, identifier=f"{self.__class__.__name__}({self.identifier()})")
 
     def is_ready(self) -> bool:
         """
@@ -36,7 +50,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         """
 
         if not self.is_ready():
-            raise ValueError(f"Node {self.config.id} is not ready")
+            raise ValueError(f"Node {self.node_config.id} is not ready")
         self.setup()
 
     

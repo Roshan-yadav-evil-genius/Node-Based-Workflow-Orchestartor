@@ -34,3 +34,4 @@ def deserialize(data: Optional[str]) -> Optional[Any]:
     if data is None:
         return None
     return json.loads(data)
+

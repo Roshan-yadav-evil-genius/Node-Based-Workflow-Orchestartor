@@ -109,3 +109,4 @@ class RedisConnection:
         """
         await self.close()
         await self.ensure_connection()
+
