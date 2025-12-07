@@ -46,6 +46,11 @@ class DependencyHandler:
         based on any pre-populated parent field values.
         """
         dependencies = self._form.get_field_dependencies()
+        
+        # If no dependencies defined, nothing to initialize
+        if not dependencies:
+            return
+        
         processed_fields: set = set()
         
         def process_field(field_name: str):
@@ -82,6 +87,10 @@ class DependencyHandler:
             value: New value of the field
         """
         dependencies = self._form.get_field_dependencies()
+        
+        # If no dependencies defined, nothing to handle
+        if not dependencies:
+            return
         
         if field_name in dependencies:
             # Clear dependent fields first
