@@ -55,6 +55,20 @@
             border-radius: 20px;
             font-size: 0.85rem;
         }
+        .subfolder-header {
+            background: linear-gradient(135deg, #a8c0ff 0%, #b8a9c9 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .subfolder-container {
+            margin-left: 20px;
+            border-left: 2px solid #e0e0e0;
+        }
         .node-item {
             padding: 15px 20px;
             border-bottom: 1px solid #eee;
@@ -125,6 +139,17 @@
             cursor: pointer;
             margin-bottom: 5px;
         }
+        .modal-subfolder-header {
+            background: #f0f4f8;
+            padding: 8px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 5px;
+            margin-left: 15px;
+        }
         .modal-category-title {
             display: flex;
             align-items: center;
@@ -133,6 +158,7 @@
         }
         .modal-category-title i { color: #f0ad4e; }
         .modal-node-list { padding-left: 10px; }
+        .modal-subfolder-content { margin-left: 15px; }
         .modal-node-item {
             padding: 10px 15px;
             border: 1px solid #eee;
@@ -184,6 +210,92 @@
     </style>
 </head>
 <body>
+    {# Macro to count nodes recursively in a folder structure #}
+    {% macro count_nodes(folder_data) %}
+        {%- set count = folder_data.nodes|length -%}
+        {%- for subfolder_data in folder_data.subfolders.values() -%}
+            {%- set count = count + count_nodes(subfolder_data)|int -%}
+        {%- endfor -%}
+        {{ count }}
+    {%- endmacro %}
+
+    {# Recursive macro to render folder content (nodes and subfolders) #}
+    {% macro render_folder_content(folder_data, prefix, depth=0) %}
+        {# Render nodes directly in this folder #}
+        {% for node in folder_data.nodes %}
+        <div class="node-item" style="padding-left: {{ 20 + depth * 20 }}px;">
+            <div class="node-icon {{ node.type|lower|replace('node', '') }}">
+                <i class="bi bi-box"></i>
+            </div>
+            <div class="node-info">
+                <div class="node-name">
+                    {{ node.name }}
+                    <i class="bi bi-info-circle-fill info-icon" title="Type: {{ node.type }}"></i>
+                </div>
+                <div class="node-identifier">identifier: {{ node.identifier }}</div>
+            </div>
+            <span class="type-badge">{{ node.type }}</span>
+        </div>
+        {% endfor %}
+
+        {# Render subfolders recursively #}
+        {% for subfolder_name, subfolder_data in folder_data.subfolders.items() %}
+        <div class="subfolder-container">
+            <div class="subfolder-header" data-bs-toggle="collapse" data-bs-target="#{{ prefix }}-sub-{{ loop.index }}">
+                <div class="category-title">
+                    <i class="bi bi-folder-fill"></i>
+                    <span>{{ subfolder_name }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="category-badge">{{ count_nodes(subfolder_data)|trim }} nodes</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="{{ prefix }}-sub-{{ loop.index }}">
+                {{ render_folder_content(subfolder_data, prefix ~ '-sub-' ~ loop.index, depth + 1) }}
+            </div>
+        </div>
+        {% endfor %}
+    {% endmacro %}
+
+    {# Recursive macro for modal folder content #}
+    {% macro render_modal_folder(folder_data, prefix, depth=0) %}
+        {# Render nodes directly in this folder #}
+        <div class="modal-node-list" style="margin-left: {{ depth * 15 }}px;">
+            {% for node in folder_data.nodes %}
+            <div class="modal-node-item" onclick="selectNode('{{ node.identifier }}', '{{ node.name }}')">
+                <div class="modal-node-icon {{ node.type|lower|replace('node', '') }}">
+                    <i class="bi bi-box"></i>
+                </div>
+                <div class="modal-node-info">
+                    <div class="modal-node-name">
+                        {{ node.name }}
+                        <i class="bi bi-info-circle-fill text-primary" style="font-size: 0.8rem;"></i>
+                    </div>
+                    <div class="modal-node-identifier">identifier: {{ node.identifier }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Render subfolders recursively #}
+        {% for subfolder_name, subfolder_data in folder_data.subfolders.items() %}
+        <div class="modal-subfolder-content">
+            <div class="modal-subfolder-header" data-bs-toggle="collapse" data-bs-target="#{{ prefix }}-msub-{{ loop.index }}">
+                <div class="modal-category-title">
+                    <i class="bi bi-folder-fill"></i>
+                    <span>{{ subfolder_name }}</span>
+                    <small class="text-muted">({{ count_nodes(subfolder_data)|trim }} nodes)</small>
+                </div>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="{{ prefix }}-msub-{{ loop.index }}">
+                {{ render_modal_folder(subfolder_data, prefix ~ '-msub-' ~ loop.index, depth + 1) }}
+            </div>
+        </div>
+        {% endfor %}
+    {% endmacro %}
+
     <div class="header">
         <h1>Node Engine POC</h1>
         <button class="btn btn-primary btn-add-node" data-bs-toggle="modal" data-bs-target="#nodeModal">
@@ -205,7 +317,7 @@
     <div class="main-content">
         <div class="row">
             <div class="col-12">
-                {% for category, node_list in nodes.items() %}
+                {% for category, folder_data in nodes.items() %}
                 <div class="category-card">
                     <div class="category-header" data-bs-toggle="collapse" data-bs-target="#cat-{{ loop.index }}">
                         <div class="category-title">
@@ -213,26 +325,12 @@
                             <span>{{ category }}</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
-                            <span class="category-badge">{{ node_list|length }} node{{ 's' if node_list|length > 1 else '' }}</span>
+                            <span class="category-badge">{{ count_nodes(folder_data)|trim }} nodes</span>
                             <i class="bi bi-chevron-down"></i>
                         </div>
                     </div>
                     <div class="collapse show" id="cat-{{ loop.index }}">
-                        {% for node in node_list %}
-                        <div class="node-item">
-                            <div class="node-icon {{ node.type|lower|replace('node', '') }}">
-                                <i class="bi bi-box"></i>
-                            </div>
-                            <div class="node-info">
-                                <div class="node-name">
-                                    {{ node.name }}
-                                    <i class="bi bi-info-circle-fill info-icon" title="Type: {{ node.type }}"></i>
-                                </div>
-                                <div class="node-identifier">identifier: {{ node.identifier }}</div>
-                            </div>
-                            <span class="type-badge">{{ node.type }}</span>
-                        </div>
-                        {% endfor %}
+                        {{ render_folder_content(folder_data, 'cat-' ~ loop.index) }}
                     </div>
                 </div>
                 {% endfor %}
@@ -254,31 +352,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    {% for category, node_list in nodes.items() %}
+                    {% for category, folder_data in nodes.items() %}
                     <div class="modal-category">
                         <div class="modal-category-header" data-bs-toggle="collapse" data-bs-target="#mcat-{{ loop.index }}">
                             <div class="modal-category-title">
                                 <i class="bi bi-folder-fill"></i>
                                 <span>{{ category }}</span>
-                                <small class="text-muted">({{ node_list|length }} nodes)</small>
+                                <small class="text-muted">({{ count_nodes(folder_data)|trim }} nodes)</small>
                             </div>
                             <i class="bi bi-chevron-down"></i>
                         </div>
-                        <div class="collapse show modal-node-list" id="mcat-{{ loop.index }}">
-                            {% for node in node_list %}
-                            <div class="modal-node-item" onclick="selectNode('{{ node.identifier }}', '{{ node.name }}')">
-                                <div class="modal-node-icon {{ node.type|lower|replace('node', '') }}">
-                                    <i class="bi bi-box"></i>
-                                </div>
-                                <div class="modal-node-info">
-                                    <div class="modal-node-name">
-                                        {{ node.name }}
-                                        <i class="bi bi-info-circle-fill text-primary" style="font-size: 0.8rem;"></i>
-                                    </div>
-                                    <div class="modal-node-identifier">identifier: {{ node.identifier }}</div>
-                                </div>
-                            </div>
-                            {% endfor %}
+                        <div class="collapse show" id="mcat-{{ loop.index }}">
+                            {{ render_modal_folder(folder_data, 'mcat-' ~ loop.index) }}
                         </div>
                     </div>
                     {% endfor %}

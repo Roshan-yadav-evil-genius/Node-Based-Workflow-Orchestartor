@@ -90,12 +90,67 @@ def scan_python_file(file_path: Path) -> List[Dict]:
     return nodes
 
 
-def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, List[Dict]]:
+def scan_directory_recursive(directory: Path) -> Dict:
     """
-    Scan the Nodes folder and return all nodes grouped by category.
+    Recursively scan a directory and build a hierarchical tree structure.
+    Scans all folders no matter how deep they are nested.
     
     Returns:
-        Dict with category names as keys and lists of node metadata as values.
+        Dict with 'nodes' (list of node metadata) and 'subfolders' (dict of subdirectories).
+    """
+    result = {
+        'nodes': [],
+        'subfolders': {}
+    }
+    
+    # Scan Python files directly in this directory
+    for item in directory.iterdir():
+        if item.is_file() and item.suffix == '.py':
+            # Skip __init__.py
+            if item.name == '__init__.py':
+                continue
+            
+            nodes = scan_python_file(item)
+            result['nodes'].extend(nodes)
+    
+    # Recursively scan ALL subdirectories (no matter how deep)
+    for subdir in directory.iterdir():
+        if not subdir.is_dir():
+            continue
+        
+        subdir_name = subdir.name
+        
+        # Skip __pycache__ and other hidden directories
+        if subdir_name.startswith('_') or subdir_name.startswith('.'):
+            continue
+        
+        # Always include subfolder - scan recursively no matter how deep
+        subfolder_result = scan_directory_recursive(subdir)
+        result['subfolders'][subdir_name] = subfolder_result
+    
+    return result
+
+
+def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, Dict]:
+    """
+    Scan the Nodes folder and return all nodes in a hierarchical tree structure.
+    
+    Returns:
+        Dict with category names as keys and nested structure as values.
+        Each value contains 'nodes' (list) and 'subfolders' (dict).
+        
+    Example:
+        {
+            "Playwright": {
+                "nodes": [],
+                "subfolders": {
+                    "Freelancer": {
+                        "nodes": [{"name": "Bidder", ...}],
+                        "subfolders": {}
+                    }
+                }
+            }
+        }
     """
     if nodes_path is None:
         # Default path relative to this file
@@ -109,7 +164,7 @@ def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, List[Dict]]
     
     grouped_nodes = {}
     
-    # Iterate through subdirectories (categories)
+    # Iterate through top-level subdirectories (categories)
     for category_dir in nodes_path.iterdir():
         if not category_dir.is_dir():
             continue
@@ -120,37 +175,50 @@ def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, List[Dict]]
         if category_name.startswith('_') or category_name.startswith('.'):
             continue
         
-        category_nodes = []
-        
-        # Scan all Python files in this category (recursively)
-        for py_file in category_dir.rglob('*.py'):
-            # Skip __init__.py
-            if py_file.name == '__init__.py':
-                continue
-            
-            nodes = scan_python_file(py_file)
-            category_nodes.extend(nodes)
-        
-        if category_nodes:
-            grouped_nodes[category_name] = category_nodes
+        # Always include all categories - scan recursively no matter how deep
+        category_result = scan_directory_recursive(category_dir)
+        grouped_nodes[category_name] = category_result
     
     return grouped_nodes
 
 
+def _collect_nodes_recursive(folder_data: Dict, category_path: str, flat_list: List[Dict]):
+    """
+    Helper function to recursively collect nodes from hierarchical structure.
+    """
+    # Add nodes from current folder
+    for node in folder_data['nodes']:
+        node_copy = node.copy()
+        node_copy['category'] = category_path
+        flat_list.append(node_copy)
+    
+    # Recursively process subfolders
+    for subfolder_name, subfolder_data in folder_data['subfolders'].items():
+        subfolder_path = f"{category_path}/{subfolder_name}"
+        _collect_nodes_recursive(subfolder_data, subfolder_path, flat_list)
+
+
 def get_all_nodes_flat() -> List[Dict]:
     """
-    Get all nodes as a flat list with category included.
+    Get all nodes as a flat list with category path included.
     """
     grouped = scan_nodes_folder()
     flat_list = []
     
-    for category, nodes in grouped.items():
-        for node in nodes:
-            node_copy = node.copy()
-            node_copy['category'] = category
-            flat_list.append(node_copy)
+    for category, folder_data in grouped.items():
+        _collect_nodes_recursive(folder_data, category, flat_list)
     
     return flat_list
+
+
+def _count_nodes_recursive(folder_data: Dict) -> int:
+    """
+    Helper function to recursively count nodes from hierarchical structure.
+    """
+    count = len(folder_data['nodes'])
+    for subfolder_data in folder_data['subfolders'].values():
+        count += _count_nodes_recursive(subfolder_data)
+    return count
 
 
 def get_node_count() -> int:
@@ -158,7 +226,10 @@ def get_node_count() -> int:
     Get total count of all nodes.
     """
     grouped = scan_nodes_folder()
-    return sum(len(nodes) for nodes in grouped.values())
+    total = 0
+    for folder_data in grouped.values():
+        total += _count_nodes_recursive(folder_data)
+    return total
 
 
 if __name__ == '__main__':
