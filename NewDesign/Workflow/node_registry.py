@@ -30,7 +30,8 @@ class NodeRegistry:
                         subpackage = importlib.import_module(modname)
                         if hasattr(subpackage, "__path__"):
                             walk_packages(subpackage.__path__, modname + ".")
-                    except Exception:
+                    except Exception as e:
+                        logger.error(f"Failed to import subpackage '{modname}'", error=str(e))
                         continue
                 else:
                     try:
@@ -41,7 +42,8 @@ class NodeRegistry:
                             if issubclass(obj, (ProducerNode, BlockingNode, NonBlockingNode)):
                                 if obj not in cls._abstract_base_classes:
                                     discovered_classes.append(obj)
-                    except Exception:
+                    except Exception as e:
+                        logger.error(f"Failed to import module '{modname}'", error=str(e))
                         continue
 
         walk_packages(Nodes.__path__, Nodes.__name__ + ".")
@@ -63,12 +65,16 @@ class NodeRegistry:
             cls._node_registry = cls._discover_node_classes()
 
     @classmethod
-    def create_node(cls, nodeConfig: NodeConfig) -> Optional[BaseNode]:
+    def create_node(cls, nodeConfig: NodeConfig) -> BaseNode:
         cls._ensure_registry_loaded()
         node_cls = cls._node_registry.get(nodeConfig.type)
         if node_cls:
             instance = node_cls(nodeConfig)
             logger.info(f"Initialized BaseNode Instance", base_node_type=node_type(instance), node_id=nodeConfig.id)
             return instance
-        logger.warning(f"Unknown node type '{nodeConfig.type}'")
-        return None
+        
+        available_types = list(cls._node_registry.keys())
+        raise ValueError(
+            f"Unknown node type '{nodeConfig.type}' for node id '{nodeConfig.id}'. "
+            f"Available types: {available_types}"
+        )
