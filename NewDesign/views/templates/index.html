@@ -379,6 +379,243 @@
             background: #e3f2fd;
             color: #1565c0;
         }
+        
+        /* Play button styles */
+        .btn-play-node {
+            background: transparent;
+            border: none;
+            color: #2196f3;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-play-node:hover {
+            background: #e3f2fd;
+            color: #1565c0;
+            transform: scale(1.1);
+        }
+        
+        /* Execution Popup Styles */
+        .execution-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1050;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .execution-overlay.show {
+            display: flex;
+        }
+        .execution-popup {
+            background: #2d2d2d;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1400px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .execution-content {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        /* Input/Output Panels */
+        .execution-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            min-width: 0;
+        }
+        .execution-panel.io-panel {
+            background: #1e1e1e;
+        }
+        .panel-header {
+            background: #3d3d3d;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .panel-content {
+            flex: 1;
+            overflow: auto;
+            border-radius: 8px;
+        }
+        .json-editor {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            background: #1e1e1e;
+            border: 1px solid #3d3d3d;
+            border-radius: 8px;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            padding: 15px;
+            resize: none;
+        }
+        .json-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .json-output {
+            background: #1e1e1e;
+            border: 1px solid #3d3d3d;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 400px;
+            overflow: auto;
+        }
+        .json-output pre {
+            margin: 0;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Form Panel */
+        .execution-panel.form-panel {
+            background: #f5f5f5;
+            max-width: 400px;
+            min-width: 350px;
+        }
+        .form-panel-header {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .form-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-panel-title i {
+            color: #667eea;
+        }
+        .btn-close-popup {
+            background: #ff5252;
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .btn-close-popup:hover {
+            background: #ff1744;
+        }
+        .form-panel-content {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .form-panel-content .form-field {
+            margin-bottom: 15px;
+        }
+        .form-panel-content .form-field label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+            display: block;
+            font-size: 0.9rem;
+        }
+        .form-panel-content .form-field input,
+        .form-panel-content .form-field textarea,
+        .form-panel-content .form-field select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .form-panel-content .form-field textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .btn-execute {
+            background: #e53935;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        .btn-execute:hover {
+            background: #c62828;
+        }
+        .btn-execute:disabled {
+            background: #bdbdbd;
+            cursor: not-allowed;
+        }
+        .btn-execute .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 8px;
+        }
+        
+        /* Output states */
+        .output-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            text-align: center;
+            padding: 40px;
+        }
+        .output-placeholder i {
+            font-size: 3rem;
+            color: #444;
+            margin-bottom: 15px;
+        }
+        .output-error {
+            color: #ff5252;
+        }
+        .output-error pre {
+            color: #ff5252 !important;
+        }
     </style>
 </head>
 <body>
@@ -407,7 +644,9 @@
                 <div class="node-identifier">identifier: {{ node.identifier }}</div>
             </div>
             <span class="type-badge">{{ node.type }}</span>
-            <i class="bi bi-chevron-right text-muted"></i>
+            <button class="btn-play-node" onclick="event.stopPropagation(); openExecutionPopup('{{ node.identifier }}', '{{ node.name }}')" title="Execute Node">
+                <i class="bi bi-play-fill"></i>
+            </button>
         </div>
         {% endfor %}
 
@@ -563,10 +802,301 @@
         </div>
     </div>
 
+    <!-- Execution Popup -->
+    <div class="execution-overlay" id="executionOverlay">
+        <div class="execution-popup">
+            <div class="execution-content">
+                <!-- Input Panel -->
+                <div class="execution-panel io-panel">
+                    <div class="panel-header">Input</div>
+                    <div class="panel-content">
+                        <textarea class="json-editor" id="executionInput" placeholder="Enter input JSON data..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Form Panel -->
+                <div class="execution-panel form-panel">
+                    <div class="form-panel-header">
+                        <div class="form-panel-title">
+                            <i class="bi bi-diagram-3"></i>
+                            <span id="executionNodeName">Node Name</span>
+                        </div>
+                        <button class="btn-close-popup" onclick="closeExecutionPopup()" title="Close">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="form-panel-content" id="executionFormContent">
+                        <!-- Form fields will be rendered here -->
+                    </div>
+                    <button class="btn-execute" id="btnExecute" onclick="executeNode()">
+                        Execute
+                    </button>
+                </div>
+                
+                <!-- Output Panel -->
+                <div class="execution-panel io-panel">
+                    <div class="panel-header">Output</div>
+                    <div class="panel-content">
+                        <div class="json-output" id="executionOutput">
+                            <div class="output-placeholder">
+                                <i class="bi bi-play-circle"></i>
+                                <p>Click Execute to run the node and see the output</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var tooltips = [].slice.call(document.querySelectorAll('[title]'));
         tooltips.forEach(function(el) { new bootstrap.Tooltip(el); });
+        
+        // Execution popup state
+        var currentNodeIdentifier = null;
+        var currentNodeFormFields = [];
+        
+        // Default input JSON template
+        var defaultInputJson = {
+            "url": "https://www.freelancer.in/projects/git/web-development-intern-with-react.html",
+            "title": "Web Development Intern with React Skills",
+            "budget": "Budget \u20B91,500 \u2013 12,500 INR",
+            "parsed_budget": {
+                "min": "1500",
+                "max": "12500",
+                "currency_symbol": "\u20B9",
+                "currency": "INR",
+                "per_hour": false
+            },
+            "description": "I'm seeking an intern for a web development position who is eager to learn and contribute to our projects.",
+            "skills": ["Documentation", "Frontend Development", "Git", "HTML", "HTML5"],
+            "ClientRating": 5,
+            "ClientReviews": 27,
+            "timestamp": new Date().toISOString()
+        };
+        
+        function openExecutionPopup(identifier, nodeName) {
+            currentNodeIdentifier = identifier;
+            
+            // Update popup header
+            document.getElementById('executionNodeName').textContent = nodeName;
+            
+            // Set default input JSON
+            document.getElementById('executionInput').value = JSON.stringify(defaultInputJson, null, 2);
+            
+            // Reset output
+            document.getElementById('executionOutput').innerHTML = `
+                <div class="output-placeholder">
+                    <i class="bi bi-play-circle"></i>
+                    <p>Click Execute to run the node and see the output</p>
+                </div>
+            `;
+            
+            // Show popup
+            document.getElementById('executionOverlay').classList.add('show');
+            
+            // Load form fields
+            loadExecutionForm(identifier);
+        }
+        
+        function closeExecutionPopup() {
+            document.getElementById('executionOverlay').classList.remove('show');
+            currentNodeIdentifier = null;
+            currentNodeFormFields = [];
+        }
+        
+        function loadExecutionForm(identifier) {
+            var formContent = document.getElementById('executionFormContent');
+            formContent.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            fetch('/api/node/' + encodeURIComponent(identifier) + '/form')
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.form && data.form.fields && data.form.fields.length > 0) {
+                        currentNodeFormFields = data.form.fields;
+                        formContent.innerHTML = renderExecutionFormFields(data.form.fields);
+                    } else {
+                        currentNodeFormFields = [];
+                        formContent.innerHTML = `
+                            <div class="output-placeholder">
+                                <i class="bi bi-file-earmark-x"></i>
+                                <p>This node has no form fields</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(function(error) {
+                    formContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Error loading form: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+        
+        function renderExecutionFormFields(fields) {
+            var html = '';
+            
+            fields.forEach(function(field, index) {
+                var fieldId = 'exec_field_' + index;
+                var fieldName = field.name || 'field_' + index;
+                var label = field.label || field.name || 'Field';
+                var isRequired = field.required === true;
+                
+                html += '<div class="form-field">';
+                html += '<label for="' + fieldId + '">' + escapeHtml(label);
+                if (isRequired) {
+                    html += '<span class="field-required" style="color: #dc3545; margin-left: 2px;">*</span>';
+                }
+                html += '</label>';
+                
+                // Render input based on field type
+                if (field.tag === 'select' && field.options) {
+                    html += '<select class="form-select" id="' + fieldId + '" data-field-name="' + fieldName + '">';
+                    field.options.forEach(function(opt) {
+                        var selected = opt.selected ? ' selected' : '';
+                        html += '<option value="' + escapeHtml(opt.value) + '"' + selected + '>' + escapeHtml(opt.text) + '</option>';
+                    });
+                    html += '</select>';
+                } else if (field.tag === 'textarea') {
+                    html += '<textarea id="' + fieldId + '" data-field-name="' + fieldName + '" rows="3" placeholder="' + escapeHtml(field.placeholder || '') + '"></textarea>';
+                } else if (field.type === 'checkbox') {
+                    html += '<div><input type="checkbox" id="' + fieldId + '" data-field-name="' + fieldName + '"> <span>' + escapeHtml(label) + '</span></div>';
+                } else {
+                    var inputType = field.type || 'text';
+                    if (inputType === 'number') {
+                        var min = field.min !== undefined ? ' min="' + field.min + '"' : '';
+                        var max = field.max !== undefined ? ' max="' + field.max + '"' : '';
+                        html += '<input type="number" id="' + fieldId + '" data-field-name="' + fieldName + '"' + min + max + ' placeholder="' + escapeHtml(field.placeholder || '') + '">';
+                    } else {
+                        html += '<input type="' + inputType + '" id="' + fieldId + '" data-field-name="' + fieldName + '" placeholder="' + escapeHtml(field.placeholder || '') + '">';
+                    }
+                }
+                
+                html += '</div>';
+            });
+            
+            return html;
+        }
+        
+        function collectFormData() {
+            var formData = {};
+            
+            currentNodeFormFields.forEach(function(field, index) {
+                var fieldId = 'exec_field_' + index;
+                var fieldName = field.name || 'field_' + index;
+                var element = document.getElementById(fieldId);
+                
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        formData[fieldName] = element.checked;
+                    } else {
+                        formData[fieldName] = element.value;
+                    }
+                }
+            });
+            
+            return formData;
+        }
+        
+        function executeNode() {
+            if (!currentNodeIdentifier) {
+                alert('No node selected');
+                return;
+            }
+            
+            var btn = document.getElementById('btnExecute');
+            var outputEl = document.getElementById('executionOutput');
+            
+            // Get input JSON
+            var inputText = document.getElementById('executionInput').value;
+            var inputData;
+            
+            try {
+                inputData = JSON.parse(inputText);
+            } catch (e) {
+                outputEl.innerHTML = `
+                    <div class="output-error">
+                        <pre>Error: Invalid input JSON\n${e.message}</pre>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Get form data
+            var formData = collectFormData();
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Executing...';
+            outputEl.innerHTML = `
+                <div class="output-placeholder">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Executing...</span>
+                    </div>
+                    <p>Executing node...</p>
+                </div>
+            `;
+            
+            // Call execute API
+            fetch('/api/node/' + encodeURIComponent(currentNodeIdentifier) + '/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    input_data: inputData,
+                    form_data: formData
+                })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                btn.innerHTML = 'Execute';
+                
+                if (data.error) {
+                    outputEl.innerHTML = `
+                        <div class="output-error">
+                            <pre>${syntaxHighlight(JSON.stringify(data, null, 2))}</pre>
+                        </div>
+                    `;
+                } else {
+                    outputEl.innerHTML = `<pre>${syntaxHighlight(JSON.stringify(data.output || data, null, 2))}</pre>`;
+                }
+            })
+            .catch(function(error) {
+                btn.disabled = false;
+                btn.innerHTML = 'Execute';
+                outputEl.innerHTML = `
+                    <div class="output-error">
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+            });
+        }
+        
+        // Close popup on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('executionOverlay').classList.contains('show')) {
+                closeExecutionPopup();
+            }
+        });
+        
+        // Close popup on clicking overlay background
+        document.getElementById('executionOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeExecutionPopup();
+            }
+        });
         
         function selectNode(id, name) {
             // Show node details when selecting from Add Node modal
