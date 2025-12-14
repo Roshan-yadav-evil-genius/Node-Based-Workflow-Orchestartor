@@ -1,6 +1,12 @@
 import asyncio
 from typing import Dict, Optional
-from playwright.async_api import async_playwright, Browser, Playwright, BrowserContext
+from playwright.async_api import (
+    async_playwright,
+    Browser,
+    Playwright,
+    BrowserContext,
+    Page,
+)
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -63,6 +69,26 @@ class BrowserManager:
         )
         self._contexts[context_name] = context
         return context
+
+    async def get_or_create_page(self, context: BrowserContext, url: str) -> Page:
+        """
+        Check if any page in the given context is already at the specified URL.
+        If yes, return that page.
+        Else, create a new page, navigate to the URL, and return it.
+        """
+        # Normalize URL for comparison (remove trailing slash)
+        target_url = url.rstrip("/")
+
+        for page in context.pages:
+            current_url = page.url.rstrip("/")
+            if current_url == target_url:
+                logger.info(f"Page already exists for URL: {url}")
+                return page
+
+        logger.info(f"Creating new page for URL: {url}")
+        page = await context.new_page()
+        await page.goto(url)
+        return page
 
     async def close(self):
         """Close all contexts and playwright."""
