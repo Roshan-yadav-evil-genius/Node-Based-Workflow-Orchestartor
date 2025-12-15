@@ -30,16 +30,10 @@ async def main():
         # Note: In a real scenario, this runs indefinitely. 
         # For simulation, we'll let it run for a few seconds then stop.
         
-        logger.info("[Simulation] Starting Workflow Simulation...")
+        logger.info("[Simulation] Starting Workflow Simulation (Auto-Shutdown expected)...")
         simulation_task = asyncio.create_task(orchestrator.run_production())
         
-        await asyncio.sleep(20) # Run for 20 seconds
-        
-        logger.info("[Simulation] Stopping Simulation...")
-        # Stop all flows
-        # Stop all flows
-        orchestrator.force_shutdown()
-            
+        # Await natural completion via Sentinel Pill (triggered by job_limit)
         await simulation_task
         logger.info("[Simulation] Simulation Completed.")
         

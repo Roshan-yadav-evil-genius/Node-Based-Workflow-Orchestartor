@@ -4,7 +4,10 @@
       "id": "1",
       "type": "playwright-freelance-job-monitor-producer",
       "data": {
-        "config": {}
+        "config": {},
+        "form": {
+          "job_limit": 0
+        }
       }
     },
     {
