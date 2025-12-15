@@ -15,7 +15,7 @@ async def main():
     setup_logging()
     # 1. Load workflow.json from test folder
     try:
-        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
+        workflow_path = os.path.join(os.path.dirname(__file__), "reproduce_workflow_loading.json")
         with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
         print("Loaded workflow.json")

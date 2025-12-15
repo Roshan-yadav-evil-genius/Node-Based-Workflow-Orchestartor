@@ -17,7 +17,7 @@ async def main():
     
     try:
         # Load workflow.json from test folder
-        workflow_path = os.path.join(os.path.dirname(__file__), "workflow.json")
+        workflow_path = os.path.join(os.path.dirname(__file__), "simulate_workflow_force_shutdown.json")
         with open(workflow_path, "r") as f:
             workflow_data = json.load(f)
             
@@ -37,8 +37,8 @@ async def main():
         
         logger.info("[Simulation] Stopping Simulation...")
         # Stop all flows
-        for runner in orchestrator.flow_runners:
-            runner.stop()
+        # Stop all flows
+        orchestrator.force_shutdown()
             
         await simulation_task
         logger.info("[Simulation] Simulation Completed.")
