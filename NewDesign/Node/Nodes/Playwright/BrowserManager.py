@@ -70,7 +70,7 @@ class BrowserManager:
         self._contexts[context_name] = context
         return context
 
-    async def get_or_create_page(self, context: BrowserContext, url: str) -> Page:
+    async def get_or_create_page(self, context: BrowserContext, url: str, wait_strategy: str = "commit") -> Page:
         """
         Check if any page in the given context is already at the specified URL.
         If yes, return that page.
@@ -87,7 +87,7 @@ class BrowserManager:
 
         logger.info(f"Creating new page for URL: {url}")
         page = await context.new_page()
-        await page.goto(url,wait_until="commit")
+        await page.goto(url, wait_until=wait_strategy)
         return page
 
     async def close(self):

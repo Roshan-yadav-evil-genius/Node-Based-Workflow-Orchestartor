@@ -6,7 +6,7 @@
       "data": {
         "config": {},
         "form": {
-          "data_content": "https://www.linkedin.com/in/williamhgates\nhttps://www.linkedin.com/in/sat yanadella",
+          "data_content": "https://www.linkedin.com/in/dr-ds-chauhan-70690b49/\nhttps://www.linkedin.com/in/vandana-yadav-8a9b55282/",
           "separator_type": "newline"
         }
       }
@@ -17,7 +17,7 @@
       "data": {
         "config": {},
         "form": {
-          "session_name": "linkedin_test_session",
+          "session_name": "chrome_user_data",
           "wait_mode": "domcontentloaded",
           "url": "{{data.value}}"
         }

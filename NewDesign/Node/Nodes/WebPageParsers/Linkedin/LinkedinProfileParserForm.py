@@ -1,4 +1,4 @@
-from ...Core.Form.Core.BaseForm import BaseForm
+from ....Core.Form.Core.BaseForm import BaseForm
 from django.forms import CharField
 from django.forms.widgets import Textarea
 

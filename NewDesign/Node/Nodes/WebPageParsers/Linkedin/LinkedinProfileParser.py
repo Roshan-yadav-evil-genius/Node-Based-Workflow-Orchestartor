@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 import structlog
 from scrapy import Selector
-from ...Core.Node.Core import BaseNode, NodeOutput, PoolType
+from ....Core.Node.Core import BlockingNode, NodeOutput, PoolType
 from .extractors.header import HeaderExtractor
 from .extractors.metrics import MetricsExtractor
 from .extractors.experience import ExperienceExtractor
@@ -10,7 +10,7 @@ from .extractors.section import SectionExtractor
 
 logger = structlog.get_logger(__name__)
 
-class LinkedinProfileParser(BaseNode):
+class LinkedinProfileParser(BlockingNode):
     @classmethod
     def identifier(cls) -> str:
         return "linkedin-profile-parser"
@@ -18,7 +18,7 @@ class LinkedinProfileParser(BaseNode):
     @property
     def execution_pool(self) -> PoolType:
         # Parsing is CPU bound, so run in thread pool (SYNC)
-        return PoolType.SYNC
+        return PoolType.ASYNC
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """

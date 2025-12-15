@@ -12,7 +12,7 @@ class StringIterator(ProducerNode):
 
     @property
     def execution_pool(self) -> PoolType:
-        return PoolType.SYNC
+        return PoolType.ASYNC
 
     async def setup(self):
         """

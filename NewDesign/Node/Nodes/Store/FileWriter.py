@@ -2,11 +2,11 @@ import json
 import os
 import aiofiles
 import structlog
-from ...Core.Node.Core import BaseNode, NodeOutput, PoolType
+from ...Core.Node.Core import BlockingNode, NodeOutput, PoolType
 
 logger = structlog.get_logger(__name__)
 
-class FileWriter(BaseNode):
+class FileWriter(BlockingNode):
     @classmethod
     def identifier(cls) -> str:
         return "file-writer"
