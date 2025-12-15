@@ -87,7 +87,7 @@ class BrowserManager:
 
         logger.info(f"Creating new page for URL: {url}")
         page = await context.new_page()
-        await page.goto(url)
+        await page.goto(url,wait_until="commit")
         return page
 
     async def close(self):
