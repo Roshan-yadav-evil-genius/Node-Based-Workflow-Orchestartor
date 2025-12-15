@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "type": "string-iterator-producer",
+      "data": {
+        "config": {},
+        "form": {
+          "data_content": "https://www.linkedin.com/in/williamhgates\nhttps://www.linkedin.com/in/sat yanadella",
+          "separator_type": "newline"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "playwright-web-page-loader",
+      "data": {
+        "config": {},
+        "form": {
+          "session_name": "linkedin_test_session",
+          "wait_mode": "domcontentloaded"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "linkedin-profile-parser",
+      "data": {
+        "config": {},
+        "form": {}
+      }
+    },
+    {
+      "id": "4",
+      "type": "if-condition",
+      "data": {
+        "config": {}
+      }
+    },
+    {
+      "id": "5",
+      "type": "file-writer",
+      "data": {
+        "config": {},
+        "form": {
+          "file_path": "outputs/yes.jsonl",
+          "mode": "a"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "type": "file-writer",
+      "data": {
+        "config": {},
+        "form": {
+          "file_path": "outputs/no.jsonl",
+          "mode": "a"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2",
+      "sourceHandle": null,
+      "targetHandle": null
+    },
+    {
+      "id": "e2",
+      "source": "2",
+      "target": "3",
+      "sourceHandle": null,
+      "targetHandle": null
+    },
+    {
+      "id": "e3",
+      "source": "3",
+      "target": "4",
+      "sourceHandle": null,
+      "targetHandle": null
+    },
+    {
+      "id": "e4",
+      "source": "4",
+      "target": "5",
+      "sourceHandle": "Yes",
+      "targetHandle": null
+    },
+    {
+      "id": "e5",
+      "source": "4",
+      "target": "6",
+      "sourceHandle": "No",
+      "targetHandle": null
+    }
+  ]
+}
