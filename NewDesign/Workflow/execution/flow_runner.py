@@ -135,9 +135,20 @@ class FlowRunner:
         # Set running to False to stop next iteration
         self.running = False
 
-    def shutdown(self):
-        logger.info("Shutting down FlowRunner", loop_count=self.loop_count,  node_id=self.producer_flow_node.id, node_type=f"{node_type(self.producer)}({self.producer.identifier()})")
-        self.executor.shutdown()
+    def shutdown(self, force: bool = False):
+        logger.info(
+            "Shutting down FlowRunner",
+            loop_count=self.loop_count,
+            node_id=self.producer_flow_node.id,
+            node_type=f"{node_type(self.producer)}({self.producer.identifier()})",
+            force=force
+        )
+        if force:
+            self.running = False
+            # Force shutdown executor (don't wait for tasks)
+            self.executor.shutdown(wait=False)
+        else:
+            self.executor.shutdown(wait=True)
 
     async def _init_nodes(self):
         """Initialize all nodes in the flow by calling their init() method."""

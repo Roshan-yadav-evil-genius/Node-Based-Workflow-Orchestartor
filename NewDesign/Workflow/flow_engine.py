@@ -46,6 +46,16 @@ class FlowEngine:
             return
         await asyncio.gather(*tasks)
 
+    def force_shutdown(self):
+        """
+        Forcefully terminate all execution loops.
+        Does not wait for running tasks to complete.
+        """
+        logger.warning("Initiating FORCE SHUTDOWN of all flows")
+        for runner in self.flow_runners:
+            runner.shutdown(force=True)
+        self.flow_runners.clear()
+
     async def run_development_node(self, node_id: str, input_data: NodeOutput) -> NodeOutput:
         node = self.flow_graph.get_node_instance(node_id)
         if not node:

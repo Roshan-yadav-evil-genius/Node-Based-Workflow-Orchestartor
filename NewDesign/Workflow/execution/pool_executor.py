@@ -68,10 +68,10 @@ class PoolExecutor:
         )
         return pickle.loads(result_bytes)
     
-    def shutdown(self) -> None:
+    def shutdown(self, wait: bool = True) -> None:
         if self._thread_pool:
-            self._thread_pool.shutdown(wait=True)
+            self._thread_pool.shutdown(wait=wait)
             self._thread_pool = None
         if self._process_pool:
-            self._process_pool.shutdown(wait=True)
+            self._process_pool.shutdown(wait=wait)
             self._process_pool = None
