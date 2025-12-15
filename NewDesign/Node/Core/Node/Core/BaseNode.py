@@ -31,6 +31,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         self.node_config = node_config
         self.form = self.get_form()
         self._populate_form()
+        self.execution_count = 0
     
     def _populate_form(self):
         """
@@ -143,6 +144,7 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         if not self.form.is_valid():
             raise ValueError(f"Form validation failed after rendering: {self.form.errors}")
         else:
+            self.form.validate()
             logger.info(f"Form validation passed", form=self.form.get_all_field_values(), node_id=self.node_config.id, identifier=f"{self.__class__.__name__}({self.identifier()})")
             
     async def run(self, node_data: NodeOutput) -> NodeOutput:
@@ -163,7 +165,9 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
             return node_data
 
         self.populate_form_values(node_data)
-        return await self.execute(node_data)
+        output = await self.execute(node_data)
+        self.execution_count += 1
+        return output
 
     async def cleanup(self, node_data: Optional[NodeOutput] = None):
         """

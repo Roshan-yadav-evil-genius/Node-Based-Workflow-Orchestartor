@@ -18,7 +18,7 @@
         "config": {},
         "form": {
           "session_name": "chrome_user_data",
-          "wait_mode": "domcontentloaded",
+          "wait_mode": "load",
           "url": "{{data.value}}"
         }
       }

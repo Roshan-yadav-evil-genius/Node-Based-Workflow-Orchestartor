@@ -1,7 +1,9 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import structlog
 from scrapy import Selector
 from ....Core.Node.Core import BlockingNode, NodeOutput, PoolType
+from ....Core.Form.Core.BaseForm import BaseForm
+from .LinkedinProfileParserForm import LinkedinProfileParserForm
 from .extractors.header import HeaderExtractor
 from .extractors.metrics import MetricsExtractor
 from .extractors.experience import ExperienceExtractor
@@ -20,17 +22,20 @@ class LinkedinProfileParser(BlockingNode):
         # Parsing is CPU bound, so run in thread pool (SYNC)
         return PoolType.ASYNC
 
+    def get_form(self) -> Optional[BaseForm]:
+        return LinkedinProfileParserForm()
+
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """
         Parse Linkedin Profile HTML.
         Expects 'content' or 'html' in input data (string).
         """
         # Check form for HTML content first
-        form_data = self.node_config.data.form or {}
-        html_content = form_data.get("html_content")
+        
+        html_content = self.form.cleaned_data.get("html_content")
 
         try:
-            logger.info("Starting Linkedin Profile Parsing")
+            logger.info("Starting Linkedin Profile Parsing", html_content_length=len(html_content))
             extracted_data = self.extract_data_from_html(html_content)
             logger.info("Parsing completed successfully")
             
@@ -39,6 +44,8 @@ class LinkedinProfileParser(BlockingNode):
                 "status": "success",
                 "data": extracted_data
             }
+
+
             
             return NodeOutput(
                 id=self.node_config.id,

@@ -30,7 +30,8 @@ class FlowBuilder:
                 if flow_node:
                     self.graph.add_node(flow_node)
             except ValueError as e:
-                logger.warning(f"Could not add node: {e}")
+                logger.error(f"Could not add node: {e}")
+                raise e
 
     def _get_flow_node_instance(self, node_def: Dict[str, Any]) -> Optional[FlowNode]:
         node_config = NodeConfig(**node_def)

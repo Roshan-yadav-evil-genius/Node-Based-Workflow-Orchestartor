@@ -1,4 +1,6 @@
 from ...Core.Node.Core import ConditionalNode, NodeOutput, PoolType
+from .IfConditionForm import IfConditionForm
+from ...Core.Form.Core.BaseForm import BaseForm
 import asyncio
 import structlog
 import random
@@ -9,6 +11,9 @@ class IfCondition(ConditionalNode):
     @classmethod
     def identifier(cls) -> str:
         return "if-condition"
+    
+    def get_form(self) -> BaseForm:
+        return IfConditionForm()
 
     @property
     def execution_pool(self) -> PoolType:
@@ -16,10 +21,10 @@ class IfCondition(ConditionalNode):
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         
-        # Get condition from form
-        form_data = self.node_config.data.form or {}
-        expression = form_data.get("condition_expression", "")
-        
+        # Get processed condition from form (rendered values)
+        expression = self.form.cleaned_data.get("condition_expression", "")
+
+
         if not expression:
             logger.warning("No condition expression provided, defaulting to False", node_id=self.node_config.id)
             self.set_output(False)

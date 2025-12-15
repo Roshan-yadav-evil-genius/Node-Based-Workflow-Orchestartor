@@ -8,6 +8,7 @@ sys.path.append(os.getcwd())
 import structlog
 from config.logging_config import setup_logging
 from Workflow.flow_engine import FlowEngine
+from Node.Nodes.Playwright.BrowserManager import BrowserManager
 
 logger = structlog.get_logger(__name__)
 
@@ -36,6 +37,9 @@ async def main():
         
     except Exception as e:
         logger.exception("[Simulation] Error", error=str(e))
+    finally:
+        # Ensure resources are cleaned up
+        await BrowserManager().close()
 
 if __name__ == "__main__":
     asyncio.run(main())

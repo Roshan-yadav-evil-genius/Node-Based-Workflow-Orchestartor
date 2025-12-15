@@ -2,6 +2,8 @@ from typing import Any, Dict, Optional
 import structlog
 from ...Core.Node.Core import BlockingNode, NodeOutput, PoolType
 from .BrowserManager import BrowserManager
+from .WebPageLoaderForm import WebPageLoaderForm
+from ...Core.Form.Core.BaseForm import BaseForm
 
 logger = structlog.get_logger(__name__)
 
@@ -10,6 +12,9 @@ class WebPageLoader(BlockingNode):
     @classmethod
     def identifier(cls) -> str:
         return "playwright-web-page-loader"
+
+    def get_form(self) -> Optional[BaseForm]:
+        return WebPageLoaderForm()
 
     @property
     def execution_pool(self) -> PoolType:
@@ -35,21 +40,13 @@ class WebPageLoader(BlockingNode):
             wait_mode: Wait strategy ('load' or 'networkidle').
         """
         # Get configuration from form (rendered values)
-        form_values = {}
-        if self.form and self.form.is_valid():
-             form_values = self.form.cleaned_data
-        else:
-             # Fallback if validation oddly failed but execution proceeded (shouldn't happen with BlockingNode flow)
-             form_values = self.node_config.data.form or {}
 
-        session_name = form_values.get("session_name", "default")
-        wait_mode = form_values.get("wait_mode", "load")  # Default to 'load'
+
+        session_name = self.form.cleaned_data.get("session_name", "default")
+        wait_mode = self.form.cleaned_data.get("wait_mode", "load")  # Default to 'load'
 
         # Get URL: Check form first, then input data
-        url = form_values.get("url")
-        if not url:
-             # fallback to input
-             url = node_data.data.get("url") or node_data.data.get("value")
+        url = self.form.cleaned_data.get("url")
 
         logger.info(
             "Loading webpage",
@@ -78,7 +75,6 @@ class WebPageLoader(BlockingNode):
             content = await page.content()
 
             logger.info("Webpage loaded", title=title, url=page.url)
-            await asyncio.sleep(10)
             return NodeOutput(
                 data={
                     "url": page.url,
