@@ -37,7 +37,10 @@
       "id": "4",
       "type": "if-condition",
       "data": {
-        "config": {}
+        "config": {},
+        "form": {
+          "condition_expression": "{{ data.data.connections | string | replace(',', '') | replace('+', '') | default('0') }} > 300"
+        }
       }
     },
     {

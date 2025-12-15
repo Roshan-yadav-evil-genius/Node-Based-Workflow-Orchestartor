@@ -31,12 +31,18 @@ class LinkedinProfileParser(BaseNode):
 
         try:
             logger.info("Starting Linkedin Profile Parsing")
-            data = self.extract_data_from_html(html_content)
+            extracted_data = self.extract_data_from_html(html_content)
             logger.info("Parsing completed successfully")
+            
+            # Wrap data to match expected structure
+            final_data = {
+                "status": "success",
+                "data": extracted_data
+            }
             
             return NodeOutput(
                 id=self.node_config.id,
-                data=data,
+                data=final_data,
                 metadata={
                     "sourceNodeID": self.node_config.id,
                     "sourceNodeName": self.identifier()
