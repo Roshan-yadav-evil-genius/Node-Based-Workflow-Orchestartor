@@ -4,7 +4,7 @@ Utility functions and classes for flow management.
 
 
 from Node.Core.Node.Core import BaseNode
-from Node.Core.Node.Core.BaseNode import ProducerNode, NonBlockingNode, LogicalNode, BlockingNode
+from Node.Core.Node.Core.BaseNode import ProducerNode, NonBlockingNode, ConditionalNode, BlockingNode
 from typing import Optional
 
 
@@ -79,8 +79,8 @@ def node_type(base_node_instance: BaseNode) -> Optional[str]:
         return ProducerNode.__name__
     elif isinstance(base_node_instance, NonBlockingNode):
         return NonBlockingNode.__name__
-    elif isinstance(base_node_instance, LogicalNode):
-        return LogicalNode.__name__
+    elif isinstance(base_node_instance, ConditionalNode):
+        return ConditionalNode.__name__
     elif isinstance(base_node_instance, BlockingNode):
         return BlockingNode.__name__
     else:

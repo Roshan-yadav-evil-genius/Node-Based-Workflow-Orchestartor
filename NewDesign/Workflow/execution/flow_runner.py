@@ -1,7 +1,7 @@
 import asyncio
 import structlog
-from typing import Optional
-from Node.Core.Node.Core.BaseNode import ProducerNode, NonBlockingNode, LogicalNode
+from typing import Dict, List, Optional
+from Node.Core.Node.Core.BaseNode import ProducerNode, NonBlockingNode, ConditionalNode
 from Node.Core.Node.Core.Data import NodeOutput
 from ..flow_utils import node_type
 from ..flow_node import FlowNode
@@ -34,31 +34,83 @@ class FlowRunner:
                 data = await self.executor.execute_in_pool(
                     producer.execution_pool, producer, NodeOutput(data={})
                 )
-                logger.info("Node execution completed", node_id=self.producer_flow_node.id, node_type=f"{node_type(producer)}({producer.identifier()})", output=data.data)
-                
-                current = self.producer_flow_node
-                while True:
-                    next_nodes = current.next
-                    if not next_nodes:
-                        break
-                    
-                    branch_key = "default" if "default" in next_nodes else list(next_nodes.keys())[0]
-                    next_list = next_nodes.get(branch_key, [])
-                    if not next_list:
-                        break
-                    
-                    next_flow_node = next_list[0]
-                    next_instance = next_flow_node.instance
-                    logger.info("Initiating node execution", node_id=next_flow_node.id, node_type=f"{node_type(next_instance)}({next_instance.identifier()})")
-                    data = await self.executor.execute_in_pool(
-                        next_instance.execution_pool, next_instance, data
-                    )
-                    logger.info("Node execution completed", node_id=next_flow_node.id, node_type=f"{node_type(next_instance)}({next_instance.identifier()})", output=data.data)
-                    
-                    if isinstance(next_instance, NonBlockingNode):
-                        break
-                    
-                    current = next_flow_node
+                logger.info(
+                    "Node execution completed",
+                    node_id=self.producer_flow_node.id,
+                    node_type=f"{node_type(producer)}({producer.identifier()})",
+                    output=data.data,
+                )
+
+                await self._process_next_nodes(self.producer_flow_node, data)
+
+            except Exception as e:
+                logger.exception("Error in loop", error=str(e))
+                await asyncio.sleep(1)
+
+    async def _process_next_nodes(
+        self, current_flow_node: FlowNode, input_data: NodeOutput
+    ):
+        """
+        Recursively process downstream nodes.
+        Handles branching logic:
+        - If LogicalNode: Executes selected branch (if any).
+        - Otherwise: Executes default branch or first available branch.
+        """
+        next_nodes: Optional[Dict[str, List[FlowNode]]] = current_flow_node.next
+        if not next_nodes:
+            # No next nodes, break the loop
+            return
+
+        instance = current_flow_node.instance
+        nodes_to_run: List[FlowNode] = []
+        keys_to_process = set()
+
+        # Determine which branches to follow
+        if isinstance(instance, ConditionalNode):
+            # For LogicalNodes, we follow the selected output branch
+            if instance.output:
+                keys_to_process.add(instance.output)
+        else:
+            # For non-LogicalNodes, we follow the default branch
+            keys_to_process.add("default")
+
+        # Collect all nodes from selected branches
+        for key in keys_to_process:
+            if key in next_nodes:
+                nodes_to_run.extend(next_nodes[key])
+
+        # Execute selected nodes
+        for next_flow_node in nodes_to_run:
+            next_instance = next_flow_node.instance
+
+            logger.info(
+                "Initiating node execution",
+                node_id=next_flow_node.id,
+                node_type=f"{node_type(next_instance)}({next_instance.identifier()})",
+            )
+
+            try:
+                data = await self.executor.execute_in_pool(
+                    next_instance.execution_pool, next_instance, input_data
+                )
+
+                logger.info(
+                    "Node execution completed",
+                    node_id=next_flow_node.id,
+                    node_type=f"{node_type(next_instance)}({next_instance.identifier()})",
+                    output=data.data,
+                )
+
+                if isinstance(next_instance, NonBlockingNode):
+                    continue
+
+                # Recurse for the next steps in this branch
+                await self._process_next_nodes(next_flow_node, data)
+
+            except Exception as e:
+                logger.exception(
+                    "Error executing node", node_id=next_flow_node.id, error=str(e)
+                )
 
             except Exception as e:
                 logger.exception("Error in loop", error=str(e))
