@@ -40,11 +40,17 @@ class FlowEngine:
 
     async def run_production(self):
         logger.info("Starting Production Mode...")
-        tasks = [runner.start() for runner in self.flow_runners]
-        if not tasks:
+        self.tasks = [asyncio.create_task(runner.start()) for runner in self.flow_runners]
+        
+        if not self.tasks:
             logger.info("No flows to run.")
             return
-        await asyncio.gather(*tasks)
+
+        try:
+            await asyncio.gather(*self.tasks)
+        except asyncio.CancelledError:
+            logger.info("Production execution cancelled")
+            # graceful exit
 
     def force_shutdown(self):
         """
@@ -52,8 +58,17 @@ class FlowEngine:
         Does not wait for running tasks to complete.
         """
         logger.warning("Initiating FORCE SHUTDOWN of all flows")
+        
+        # 1. Cancel all runner tasks (breaks await on async calls like brpop)
+        if hasattr(self, 'tasks'):
+            for task in self.tasks:
+                if not task.done():
+                    task.cancel()
+        
+        # 2. Force shutdown internal executors
         for runner in self.flow_runners:
             runner.shutdown(force=True)
+        
         self.flow_runners.clear()
 
     async def run_development_node(self, node_id: str, input_data: NodeOutput) -> NodeOutput:

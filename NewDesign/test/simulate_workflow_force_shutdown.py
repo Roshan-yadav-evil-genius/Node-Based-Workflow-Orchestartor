@@ -33,11 +33,9 @@ async def main():
         logger.info("[Simulation] Starting Workflow Simulation...")
         simulation_task = asyncio.create_task(orchestrator.run_production())
         
-        await asyncio.sleep(20) # Run for 20 seconds
+        await asyncio.sleep(5) # Run for 5 seconds
         
         logger.info("[Simulation] Stopping Simulation...")
-        # Stop all flows
-        # Stop all flows
         orchestrator.force_shutdown()
             
         await simulation_task

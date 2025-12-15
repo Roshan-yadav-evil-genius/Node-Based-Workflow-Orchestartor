@@ -28,32 +28,36 @@ class FlowRunner:
         self.running = True
         await self._init_nodes()
         
-        while self.running:
-            self.loop_count += 1
-            try:
-                producer = self.producer_flow_node.instance
-                logger.info("Initiating node execution", node_id=self.producer_flow_node.id, node_type=f"{node_type(producer)}({producer.identifier()})")
-                data = await self.executor.execute_in_pool(
-                    producer.execution_pool, producer, NodeOutput(data={})
-                )
-                logger.info(
-                    "Node execution completed",
-                    node_id=self.producer_flow_node.id,
-                    node_type=f"{node_type(producer)}({producer.identifier()})",
-                    output=data.data,
-                )
+        try:
+            while self.running:
+                self.loop_count += 1
+                try:
+                    producer = self.producer_flow_node.instance
+                    logger.info("Initiating node execution", node_id=self.producer_flow_node.id, node_type=f"{node_type(producer)}({producer.identifier()})")
+                    data = await self.executor.execute_in_pool(
+                        producer.execution_pool, producer, NodeOutput(data={})
+                    )
+                    logger.info(
+                        "Node execution completed",
+                        node_id=self.producer_flow_node.id,
+                        node_type=f"{node_type(producer)}({producer.identifier()})",
+                        output=data.data,
+                    )
 
-                if isinstance(data, ExecutionCompleted):
-                    await self.kill_producer()
+                    if isinstance(data, ExecutionCompleted):
+                        await self.kill_producer()
 
-                await self._process_next_nodes(self.producer_flow_node, data)
+                    await self._process_next_nodes(self.producer_flow_node, data)
 
-            except Exception as e:
-                logger.exception("Error in loop", error=str(e))
-                await asyncio.sleep(1)
-        else:
+                except asyncio.CancelledError:
+                    logger.info("FlowRunner loop cancelled", node_id=self.producer_flow_node.id)
+                    self.running = False
+                    raise # Re-raise to let the task know it's cancelled
+                except Exception as e:
+                    logger.exception("Error in loop", error=str(e))
+                    await asyncio.sleep(1)
+        finally:
            self.shutdown()
-
 
     async def _process_next_nodes(
         self, current_flow_node: FlowNode, input_data: NodeOutput
