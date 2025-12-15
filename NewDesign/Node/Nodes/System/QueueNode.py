@@ -18,6 +18,13 @@ class QueueNode(NonBlockingNode):
         """Initialize the DataStore connection once during node setup."""
         self.data_store = DataStore()
 
+    async def cleanup(self, node_data: NodeOutput = None):
+        """
+        Push Sentinel Pill to the queue during cleanup to propagate termination.
+        """
+        await self.execute(node_data)
+        await self.data_store.close()
+
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         """
         Execute the queue node by pushing data to the queue.

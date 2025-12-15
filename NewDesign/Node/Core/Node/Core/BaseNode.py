@@ -4,7 +4,7 @@ import re
 
 import structlog
 from Node.Core.Form.Core.FormSerializer import FormSerializer
-from .Data import NodeConfig, NodeOutput
+from .Data import NodeConfig, NodeOutput, ExecutionCompleted
 from .BaseNodeProperty import BaseNodeProperty
 from .BaseNodeMethod import BaseNodeMethod
 
@@ -156,20 +156,22 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         Returns:
             NodeOutput: The result of node execution.
         """
-        from .Data import ExecutionCompleted
 
         if isinstance(node_data, ExecutionCompleted):
-            await self.cleanup()
+            await self.cleanup(node_data)
+            logger.warning("Cleanup completed", node_id=self.node_config.id, identifier=f"{self.__class__.__name__}({self.identifier()})")
             return node_data
 
         self.populate_form_values(node_data)
         return await self.execute(node_data)
 
-    async def cleanup(self):
+    async def cleanup(self, node_data: Optional[NodeOutput] = None):
         """
         Cleanup the node resources.
         Called when the node receives an ExecutionCompleted input.
-        Default implementation does nothing.
+        
+        Args:
+            node_data: The sentinel signal data, if available.
         """
         pass
 

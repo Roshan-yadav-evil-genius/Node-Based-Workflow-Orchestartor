@@ -33,7 +33,7 @@ async def main():
         logger.info("[Simulation] Starting Workflow Simulation (Auto-Shutdown expected)...")
         simulation_task = asyncio.create_task(orchestrator.run_production())
         
-        # Await natural completion via Sentinel Pill (triggered by job_limit)
+        # Await natural completion via Sentinel Pill (triggered by job_limit and propagated via queues)
         await simulation_task
         logger.info("[Simulation] Simulation Completed.")
         

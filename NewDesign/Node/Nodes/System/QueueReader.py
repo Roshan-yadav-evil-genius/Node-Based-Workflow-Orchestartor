@@ -2,6 +2,7 @@ from Workflow.flow_utils import node_type
 from ...Core.Node.Core import ProducerNode, NodeOutput, PoolType
 from Workflow.storage.data_store import DataStore
 import structlog
+from ...Core.Node.Core.Data import ExecutionCompleted
 
 logger = structlog.get_logger(__name__)
 
@@ -31,6 +32,11 @@ class QueueReader(ProducerNode):
         # Pop data from queue using the new SRP-compliant API
         # (blocks indefinitely until data arrives)
         result = await self.data_store.queue.pop(queue_name, timeout=0)
+
+        # Check for Sentinel Pill in popped data
+        if result.get("metadata", {}).get("__execution_completed__"):
+            logger.info("Received Sentinel Pill from queue", queue=queue_name)
+            return ExecutionCompleted(**result)
 
         logger.info(
             "Popped from queue",

@@ -134,6 +134,7 @@ class FlowRunner:
         await self.producer.cleanup()
         # Set running to False to stop next iteration
         self.running = False
+        logger.warning("Producer cleanup completed", node_id=self.producer_flow_node.id, node_type=f"{node_type(self.producer)}({self.producer.identifier()})")
 
     def shutdown(self, force: bool = False):
         logger.info(

@@ -36,9 +36,7 @@ class JobMonitor(ProducerNode):
             from ....Core.Node.Core.Data import ExecutionCompleted
             logger.info("Job execution limit reached", limit=job_limit)
             return ExecutionCompleted(
-                id=self.node_config.id,
                 data={"message": "Execution limit reached"},
-                metadata={"sourceNodeID": self.node_config.id}
             )
 
         self.execution_count += 1
@@ -46,9 +44,7 @@ class JobMonitor(ProducerNode):
         job_data = {"project_details": self.get_job_data()}
 
         return NodeOutput(
-            id=self.node_config.id,
             data=job_data,
-            metadata={"sourceNodeID": self.node_config.id,"sourceNodeName": self.node_config.type}
         )
     
     def get_job_data(self) -> Dict[str, Any]:
