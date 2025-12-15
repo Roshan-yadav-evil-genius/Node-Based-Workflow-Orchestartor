@@ -156,10 +156,22 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         Returns:
             NodeOutput: The result of node execution.
         """
+        from .Data import ExecutionCompleted
+
+        if isinstance(node_data, ExecutionCompleted):
+            await self.cleanup()
+            return node_data
+
         self.populate_form_values(node_data)
         return await self.execute(node_data)
 
-    
+    async def cleanup(self):
+        """
+        Cleanup the node resources.
+        Called when the node receives an ExecutionCompleted input.
+        Default implementation does nothing.
+        """
+        pass
 
 
 class NonBlockingNode(BaseNode, ABC):

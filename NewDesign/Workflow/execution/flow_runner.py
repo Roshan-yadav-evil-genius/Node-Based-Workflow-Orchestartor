@@ -6,6 +6,8 @@ from Node.Core.Node.Core.Data import NodeOutput
 from ..flow_utils import node_type
 from ..flow_node import FlowNode
 from .pool_executor import PoolExecutor
+from Node.Core.Node.Core.Data import ExecutionCompleted
+
 
 logger = structlog.get_logger(__name__)
 
@@ -41,11 +43,17 @@ class FlowRunner:
                     output=data.data,
                 )
 
+                if isinstance(data, ExecutionCompleted):
+                    await self.kill_producer()
+
                 await self._process_next_nodes(self.producer_flow_node, data)
 
             except Exception as e:
                 logger.exception("Error in loop", error=str(e))
                 await asyncio.sleep(1)
+        else:
+           self.shutdown()
+
 
     async def _process_next_nodes(
         self, current_flow_node: FlowNode, input_data: NodeOutput
@@ -66,7 +74,12 @@ class FlowRunner:
         keys_to_process = set()
 
         # Determine which branches to follow
-        if isinstance(instance, ConditionalNode):
+        if isinstance(input_data, ExecutionCompleted):
+            # If Sentinel Pill, broadcast to ALL downstream nodes regardless of logic
+            for key in next_nodes:
+                keys_to_process.add(key)
+
+        elif isinstance(instance, ConditionalNode):
             # For LogicalNodes, we follow the selected output branch
             if instance.output:
                 keys_to_process.add(instance.output)
@@ -116,10 +129,14 @@ class FlowRunner:
                 logger.exception("Error in loop", error=str(e))
                 await asyncio.sleep(1)
 
-    def stop(self):
+    async def kill_producer(self):
+        # Clean up producer resources
+        await self.producer.cleanup()
+        # Set running to False to stop next iteration
         self.running = False
 
     def shutdown(self):
+        logger.info("Shutting down FlowRunner", loop_count=self.loop_count,  node_id=self.producer_flow_node.id, node_type=f"{node_type(self.producer)}({self.producer.identifier()})")
         self.executor.shutdown()
 
     async def _init_nodes(self):

@@ -62,4 +62,15 @@ class NodeOutput(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         return self.model_dump()
-        
+
+
+class ExecutionCompleted(NodeOutput):
+    """
+    Sentinel signal indicating that the workflow execution should stop/cleanup.
+    Unlike normal NodeOutput, this payload triggers cleanup() instead of execute().
+    """
+    metadata: Optional[Union[NodeOutputMetaData, Dict[str, Any]]] = Field(
+        default_factory=lambda: {"__execution_completed__": True}
+    )
+
+
