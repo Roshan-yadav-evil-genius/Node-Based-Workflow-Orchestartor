@@ -53,7 +53,7 @@ class BrowserManager:
             return self._contexts[context_name]
 
         logger.info(f"Creating new persistent context: {context_name}")
-        user_data_dir = f"sessions/{context_name}"
+        user_data_dir = f"bin/BrowserSession/{context_name}"
 
         # Merge default args with kwargs
         launch_args = {

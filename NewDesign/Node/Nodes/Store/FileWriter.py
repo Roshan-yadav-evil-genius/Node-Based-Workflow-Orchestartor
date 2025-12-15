@@ -26,6 +26,9 @@ class FileWriter(BaseNode):
         if not file_path:
             raise ValueError("File path not configured")
 
+        # Enforce bin/FileWritter directory
+        file_path = os.path.join("bin", "FileWritter", file_path)
+
         # Ensure directory exists
         os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
 

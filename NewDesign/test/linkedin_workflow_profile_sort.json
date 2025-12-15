@@ -18,7 +18,8 @@
         "config": {},
         "form": {
           "session_name": "linkedin_test_session",
-          "wait_mode": "domcontentloaded"
+          "wait_mode": "domcontentloaded",
+          "url": "{{data.value}}"
         }
       }
     },
@@ -27,7 +28,9 @@
       "type": "linkedin-profile-parser",
       "data": {
         "config": {},
-        "form": {}
+        "form": {
+          "html_content": "{{data.content}}"
+        }
       }
     },
     {

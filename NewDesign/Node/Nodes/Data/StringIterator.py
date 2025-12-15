@@ -50,7 +50,7 @@ class StringIterator(ProducerNode):
             logger.info("StringIterator finished", total_items=len(self.items))
             return ExecutionCompleted(
                 id=self.node_config.id,
-                data={"data": "Iteration completed"},
+                data={"value": "Iteration completed"},
                 metadata={
                     "sourceNodeID": self.node_config.id,
                     "__execution_completed__": True
