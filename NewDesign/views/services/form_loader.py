@@ -4,7 +4,7 @@ Loads and serializes node forms.
 """
 
 import traceback
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from .node_loader import NodeLoader
 
@@ -86,4 +86,50 @@ class FormLoader:
         
         serializer = FormSerializer(form)
         return serializer.to_json()
+    
+    def get_field_options(
+        self, 
+        node_metadata: Dict, 
+        field_name: str, 
+        parent_value: str
+    ) -> List:
+        """
+        Get options for a dependent field based on parent value.
+        
+        Args:
+            node_metadata: Node metadata dict.
+            field_name: Name of the dependent field.
+            parent_value: Value of the parent field.
+            
+        Returns:
+            List of (value, text) tuples for the field options.
+        """
+        try:
+            node_class = self._node_loader.load_class(node_metadata)
+            if node_class is None:
+                return []
+            
+            # Check if the class has get_form method
+            if not hasattr(node_class, 'get_form'):
+                return []
+            
+            # Create a dummy instance to get the form
+            instance = self._create_dummy_instance(node_class, node_metadata)
+            form = instance.get_form()
+            
+            if form is None:
+                return []
+            
+            # Check if form has populate_field method
+            if not hasattr(form, 'populate_field'):
+                return []
+            
+            # Get options from the form's populate_field method
+            options = form.populate_field(field_name, parent_value)
+            return options if options else []
+            
+        except Exception as e:
+            print(f"Error getting field options: {e}")
+            traceback.print_exc()
+            return []
 

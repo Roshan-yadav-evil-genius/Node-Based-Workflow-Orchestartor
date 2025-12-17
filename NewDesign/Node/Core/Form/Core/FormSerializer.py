@@ -138,11 +138,10 @@ class FormSerializer:
         if field_value is not None:
             result['value'] = field_value
         
-        # Handle select elements - extract options
+        # Handle select elements - always include options (even if empty)
         if tag.name == 'select':
             options = self._extract_select_options(tag)
-            if options:
-                result['options'] = options
+            result['options'] = options
         
         return result
     
@@ -158,6 +157,20 @@ class FormSerializer:
         non_field_errors = self.form.non_field_errors()
         return list(non_field_errors) if non_field_errors else []
     
+    def _get_dependencies(self) -> Optional[Dict[str, List[str]]]:
+        """
+        Get field dependencies from the form if available.
+        Single responsibility: Retrieve dependency configuration.
+        
+        Returns:
+            Dictionary mapping parent fields to dependent fields, or None.
+        """
+        if hasattr(self.form, 'get_field_dependencies'):
+            deps = self.form.get_field_dependencies()
+            if deps:
+                return deps
+        return None
+    
     def to_json(self) -> Dict[str, Any]:
         """
         Serialize entire form to JSON.
@@ -166,6 +179,7 @@ class FormSerializer:
         Returns:
             Dictionary containing:
             - 'fields': List of field JSON objects
+            - 'dependencies': Dict of field dependencies (if any)
             - 'non_field_errors': List of global error messages (if any)
         """
         form_state = {
@@ -176,6 +190,11 @@ class FormSerializer:
         for field in self.form:
             field_json = self._serialize_field(field)
             form_state['fields'].append(field_json)
+        
+        # Add field dependencies if they exist
+        dependencies = self._get_dependencies()
+        if dependencies:
+            form_state['dependencies'] = dependencies
         
         # Add non-field errors if they exist
         non_field_errors = self._get_non_field_errors()

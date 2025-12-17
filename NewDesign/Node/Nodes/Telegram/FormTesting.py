@@ -74,13 +74,14 @@ LANGUAGE_DATA = {
 class FormTesting(BaseForm):
     # subject = forms.CharField(max_length=100)
     COUNTRY_DATA=[
-        ("india","India"),
-        ("usa","USA")
+        ("", "-- Select Country --"),
+        ("india", "India"),
+        ("usa", "USA")
     ]
     # Base fields with empty choices — we will fill these in __init__
-    country = forms.ChoiceField(choices=COUNTRY_DATA)
-    state = forms.ChoiceField(choices=[])
-    language = forms.ChoiceField(choices=[])
+    country = forms.ChoiceField(choices=COUNTRY_DATA, required=False)
+    state = forms.ChoiceField(choices=[("", "-- Select State --")], required=False)
+    language = forms.ChoiceField(choices=[("", "-- Select Language --")], required=False)
     
     def get_field_dependencies(self):
         """
@@ -97,8 +98,10 @@ class FormTesting(BaseForm):
         """
         if field_name == 'state':
             # State depends on country
-            return STATE_DATA.get(parent_value, [])
+            choices = STATE_DATA.get(parent_value, [])
+            return [("", "-- Select State --")] + list(choices)
         elif field_name == 'language':
             # Language depends on state
-            return LANGUAGE_DATA.get(parent_value, [])
+            choices = LANGUAGE_DATA.get(parent_value, [])
+            return [("", "-- Select Language --")] + list(choices)
         return []

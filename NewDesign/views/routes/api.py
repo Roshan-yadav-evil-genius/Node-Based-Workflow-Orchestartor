@@ -118,6 +118,70 @@ def execute_node(identifier):
     return jsonify(result)
 
 
+@api_bp.route('/node/<identifier>/form/field-options', methods=['POST'])
+def get_field_options(identifier):
+    """
+    Get options for a dependent field based on parent field value.
+    
+    Used for cascading dropdowns where selecting a parent value
+    populates child field options.
+    
+    Request body:
+    {
+        "parent_field": "country",
+        "parent_value": "india",
+        "dependent_field": "state"
+    }
+    
+    Returns:
+    {
+        "field": "state",
+        "options": [{"value": "maharashtra", "text": "Maharashtra"}, ...]
+    }
+    """
+    services = current_app.extensions['services']
+    
+    # Find the node by identifier
+    node = services.node_registry.find_by_identifier(identifier)
+    
+    if node is None:
+        return jsonify({
+            'error': 'Node not found', 
+            'identifier': identifier
+        }), 404
+    
+    # Parse request data
+    try:
+        request_data = request.get_json()
+    except Exception as e:
+        return jsonify({
+            'error': 'Invalid JSON in request body', 
+            'details': str(e)
+        }), 400
+    
+    if not request_data:
+        return jsonify({'error': 'Request body is required'}), 400
+    
+    parent_field = request_data.get('parent_field')
+    parent_value = request_data.get('parent_value')
+    dependent_field = request_data.get('dependent_field')
+    
+    if not all([parent_field, dependent_field]):
+        return jsonify({
+            'error': 'parent_field and dependent_field are required'
+        }), 400
+    
+    # Get field options from form
+    options = services.form_loader.get_field_options(
+        node, dependent_field, parent_value
+    )
+    
+    return jsonify({
+        'field': dependent_field,
+        'options': [{'value': v, 'text': t} for v, t in options]
+    })
+
+
 def _format_node_response(node: dict, include_form_class: bool = False) -> dict:
     """
     Format node metadata for API response.
