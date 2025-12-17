@@ -8,7 +8,7 @@ import sys
 import asyncio
 import traceback
 from flask import Flask, render_template, jsonify, request
-from .node_scanner import scan_nodes_folder, get_all_nodes_flat, get_node_count
+from node_scanner import scan_nodes_folder, get_all_nodes_flat, get_node_count
 
 app = Flask(__name__, template_folder='templates')
 

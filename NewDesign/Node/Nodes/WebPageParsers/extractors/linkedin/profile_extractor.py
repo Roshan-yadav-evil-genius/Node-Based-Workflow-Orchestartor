@@ -1,7 +1,7 @@
 import logging
 from scrapy import Selector
 from typing import Optional, List, Dict, Any
-from extractors.core.utils import clean_text, parse_int
+from ..core.utils import clean_text, parse_int
 from .selectors.profile import ProfileSelectors
 
 logger = logging.getLogger(__name__)

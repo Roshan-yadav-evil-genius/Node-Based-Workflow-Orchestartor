@@ -1,6 +1,6 @@
 from scrapy import Selector
 from typing import Optional, List
-from extractors.core.base_selector import BaseSelector
+from ...core.base_selector import BaseSelector
 from .core.keys import ProfileKey
 from .core.registry import PROFILE_REGISTRY
 
