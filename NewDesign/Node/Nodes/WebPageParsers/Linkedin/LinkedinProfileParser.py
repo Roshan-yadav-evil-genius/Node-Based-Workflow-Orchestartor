@@ -35,26 +35,12 @@ class LinkedinProfileParser(BlockingNode):
         html_content = self.form.cleaned_data.get("html_content")
 
         try:
-            logger.info("Starting Linkedin Profile Parsing", html_content_length=len(html_content))
             extracted_data = self.extract_data_from_html(html_content)
-            logger.info("Parsing completed successfully")
             
-            # Wrap data to match expected structure
-            final_data = {
-                "status": "success",
-                "data": extracted_data
-            }
-
-
+            node_data.data["parsed_linkedin_profile"] = extracted_data
             
-            return NodeOutput(
-                id=self.node_config.id,
-                data=final_data,
-                metadata={
-                    "sourceNodeID": self.node_config.id,
-                    "sourceNodeName": self.identifier()
-                }
-            )
+            return node_data
+
         except Exception as e:
             logger.exception("Error parsing Linkedin Profile", error=str(e))
             raise e

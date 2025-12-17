@@ -29,7 +29,7 @@
       "data": {
         "config": {},
         "form": {
-          "html_content": "{{data.content}}"
+          "html_content": "{{data.webpage_loader.content}}"
         }
       }
     },
@@ -39,18 +39,20 @@
       "data": {
         "config": {},
         "form": {
-          "condition_expression": "{{ data.data.connections | string | replace(',', '') | replace('+', '') | default('0') }} > 300"
+          "condition_expression": "{{ data.parsed_linkedin_profile.connections | string | replace(',', '') | replace('+', '') | default('0') }} > 300"
         }
       }
     },
     {
       "id": "5",
-      "type": "file-writer",
+      "type": "linkedin-send-connection-request",
       "data": {
         "config": {},
         "form": {
-          "file_path": "outputs/yes.jsonl",
-          "mode": "a"
+          "session_name": "chrome_user_data",
+          "send_connection_request": true,
+          "follow": true,
+          "profile_url": "{{data.webpage_loader.url}}"
         }
       }
     },

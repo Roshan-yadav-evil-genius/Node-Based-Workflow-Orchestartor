@@ -75,14 +75,16 @@ class WebPageLoader(BlockingNode):
             content = await page.content()
 
             logger.info("Webpage loaded", title=title, url=page.url)
-            return NodeOutput(
-                data={
-                    "url": page.url,
-                    "title": title,
-                    "content": content,
-                    "session_name": session_name,
-                }
-            )
+
+            final_data = {
+                "url": page.url,
+                "title": title,
+                "content": content,
+                "session_name": session_name,
+            }
+            node_data.data["webpage_loader"] = final_data
+
+            return node_data
 
         except Exception as e:
             logger.error("Failed to load webpage", url=url, error=str(e))
