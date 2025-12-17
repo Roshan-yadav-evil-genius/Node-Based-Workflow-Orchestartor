@@ -220,7 +220,14 @@ def scan_nodes_folder(nodes_path: Optional[str] = None) -> Dict[str, Dict]:
         category_result = scan_directory_recursive(category_dir)
         grouped_nodes[category_name] = category_result
     
-    return grouped_nodes
+    # Prune empty subfolders from each category
+    pruned_nodes = {}
+    for category_name, category_data in grouped_nodes.items():
+        pruned = prune_empty_folders(category_data)
+        if _count_nodes_recursive(pruned) > 0:
+            pruned_nodes[category_name] = pruned
+    
+    return pruned_nodes
 
 
 def _collect_nodes_recursive(folder_data: Dict, category_path: str, flat_list: List[Dict]):
@@ -260,6 +267,27 @@ def _count_nodes_recursive(folder_data: Dict) -> int:
     for subfolder_data in folder_data['subfolders'].values():
         count += _count_nodes_recursive(subfolder_data)
     return count
+
+
+def prune_empty_folders(folder_data: Dict) -> Dict:
+    """
+    Recursively remove subfolders that contain no nodes.
+    Returns a new dict with empty subfolders pruned.
+    """
+    pruned_subfolders = {}
+    
+    for subfolder_name, subfolder_data in folder_data['subfolders'].items():
+        # First, recursively prune the subfolder
+        pruned_subfolder = prune_empty_folders(subfolder_data)
+        
+        # Only keep if it has nodes (directly or in nested subfolders)
+        if _count_nodes_recursive(pruned_subfolder) > 0:
+            pruned_subfolders[subfolder_name] = pruned_subfolder
+    
+    return {
+        'nodes': folder_data['nodes'],
+        'subfolders': pruned_subfolders
+    }
 
 
 def get_node_count() -> int:

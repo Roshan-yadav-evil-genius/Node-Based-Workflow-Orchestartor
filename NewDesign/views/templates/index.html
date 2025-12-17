@@ -621,11 +621,11 @@
 <body>
     {# Macro to count nodes recursively in a folder structure #}
     {% macro count_nodes(folder_data) %}
-        {%- set count = folder_data.nodes|length -%}
+        {%- set ns = namespace(count=folder_data.nodes|length) -%}
         {%- for subfolder_data in folder_data.subfolders.values() -%}
-            {%- set count = count + count_nodes(subfolder_data)|int -%}
+            {%- set ns.count = ns.count + count_nodes(subfolder_data)|int -%}
         {%- endfor -%}
-        {{ count }}
+        {{ ns.count }}
     {%- endmacro %}
 
     {# Recursive macro to render folder content (nodes and subfolders) #}
@@ -644,9 +644,11 @@
                 <div class="node-identifier">identifier: {{ node.identifier }}</div>
             </div>
             <span class="type-badge">{{ node.type }}</span>
+            {% if node.has_form %}
             <button class="btn-play-node" onclick="event.stopPropagation(); openExecutionPopup('{{ node.identifier }}', '{{ node.name }}')" title="Execute Node">
                 <i class="bi bi-play-fill"></i>
             </button>
+            {% endif %}
         </div>
         {% endfor %}
 
