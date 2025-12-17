@@ -21,11 +21,15 @@ def create_app(project_root: Path = None) -> Flask:
     Returns:
         Configured Flask application.
     """
-    # Get the views directory for template folder
+    # Get the views directory for template and static folders
     views_dir = Path(__file__).parent
     
-    # Create Flask app
-    app = Flask(__name__, template_folder=str(views_dir / 'templates'))
+    # Create Flask app with template and static folders
+    app = Flask(
+        __name__, 
+        template_folder=str(views_dir / 'templates'),
+        static_folder=str(views_dir / 'static')
+    )
     
     # Initialize services and store in app extensions
     services = create_services(project_root)
