@@ -55,14 +55,26 @@ class SendConnectionRequest(BlockingNode):
             context = await self.browser_manager.get_context(session_name)
             page = await self.browser_manager.get_or_create_page(context, profile_url)
 
+            connection_status = None
+            following_status = None
+            
             profile_page = ProfilePage(page, profile_url)
             await profile_page.load()
             # Perform actions based on form configuration
             if send_request:
                 await profile_page.send_connection_request()
+                connection_status = await profile_page._get_connection_status()
+
 
             if follow_profile:
                 await profile_page.follow_profile()
+                following_status = await profile_page._get_following_status()
+            
+            final_data = {
+                "connection_request_status":connection_status.value,
+                "follow_status":following_status.value,
+            }
+            node_data.data["send_connection_request"] = final_data
 
             return node_data
 

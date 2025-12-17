@@ -19,7 +19,7 @@
         "form": {
           "session_name": "chrome_user_data",
           "wait_mode": "load",
-          "url": "{{data.value}}"
+          "url": "{{data.string_iterator.value}}"
         }
       }
     },
@@ -66,6 +66,17 @@
           "mode": "a"
         }
       }
+    },
+    {
+      "id": "7",
+      "type": "file-writer",
+      "data": {
+        "config": {},
+        "form": {
+          "file_path": "outputs/yes.jsonl",
+          "mode": "a"
+        }
+      }
     }
   ],
   "edges": [
@@ -102,6 +113,13 @@
       "source": "4",
       "target": "6",
       "sourceHandle": "No",
+      "targetHandle": null
+    },
+    {
+      "id": "e6",
+      "source": "5",
+      "target": "7",
+      "sourceHandle": null,
       "targetHandle": null
     }
   ]
