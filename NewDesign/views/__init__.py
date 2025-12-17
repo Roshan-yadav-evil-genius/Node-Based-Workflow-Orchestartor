@@ -1,16 +1,14 @@
 """
-Views package for Node Engine POC Flask server.
+Views Package
+Web interface for the Node Engine.
+
+Provides a Flask-based web interface to view and execute nodes.
 """
 
-from .main import app, run_server
-from .node_scanner import scan_nodes_folder, get_all_nodes_flat, get_node_count
+from .app import create_app, run_server
+
 
 __all__ = [
-    'app',
+    'create_app',
     'run_server',
-    'scan_nodes_folder',
-    'get_all_nodes_flat',
-    'get_node_count'
 ]
-
-
