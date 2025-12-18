@@ -194,7 +194,11 @@ class ProducerNode(BaseNode, ABC):
     Marks loop start. Called first each iteration.
     Starts and controls the loop. Controls timing and triggers downstream nodes.
     """
-    pass
+    
+    @property
+    def input_ports(self) -> list:
+        """Producer nodes have no input ports - they start the flow."""
+        return []
 
 
 class BlockingNode(BaseNode, ABC):
@@ -214,7 +218,14 @@ class ConditionalNode(BlockingNode, ABC):
         super().__init__(config)
         self.output: Optional[str] = None
         self.test_result = False
-        
+
+    @property
+    def output_ports(self) -> list:
+        """Conditional nodes have 'yes' and 'no' output branches."""
+        return [
+            {"id": "yes", "label": "Yes"},
+            {"id": "no", "label": "No"}
+        ]
 
     def set_output(self, output: bool):
         self.test_result = output

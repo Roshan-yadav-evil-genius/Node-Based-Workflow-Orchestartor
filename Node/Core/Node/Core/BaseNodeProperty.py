@@ -61,3 +61,25 @@ class BaseNodeProperty(ABC):
             str: An icon identifier or path for displaying the node.
         """
         return ""
+
+    @property
+    def input_ports(self) -> list:
+        """
+        Define input ports for this node.
+        Default is one 'default' input port.
+        
+        Returns:
+            list: List of port definitions [{"id": "default", "label": "In"}]
+        """
+        return [{"id": "default", "label": "In"}]
+
+    @property
+    def output_ports(self) -> list:
+        """
+        Define output ports for this node.
+        Default is one 'default' output port.
+        
+        Returns:
+            list: List of port definitions [{"id": "default", "label": "Out"}]
+        """
+        return [{"id": "default", "label": "Out"}]

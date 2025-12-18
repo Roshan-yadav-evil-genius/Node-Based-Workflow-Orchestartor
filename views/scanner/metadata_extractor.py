@@ -48,6 +48,9 @@ class MetadataExtractor:
         label = self._extract_property_string(class_node, 'label')
         description = self._extract_property_string(class_node, 'description')
         
+        # Get port configuration based on node type
+        ports = self._get_default_ports(node_type)
+        
         return {
             'name': class_node.name,
             'identifier': identifier or class_node.name.lower(),
@@ -55,7 +58,9 @@ class MetadataExtractor:
             'has_form': form_class is not None,
             'form_class': form_class,
             'label': label,
-            'description': description
+            'description': description,
+            'input_ports': ports['input_ports'],
+            'output_ports': ports['output_ports'],
         }
     
     def _get_node_type(self, class_node: ast.ClassDef) -> Optional[str]:
@@ -121,4 +126,29 @@ class MetadataExtractor:
                     if isinstance(decorator, ast.Name) and decorator.id == 'property':
                         return self._extract_string_from_return(item)
         return None
+
+    def _get_default_ports(self, node_type: str) -> dict:
+        """
+        Get default port configuration based on node type.
+        
+        Args:
+            node_type: The base class type of the node.
+            
+        Returns:
+            Dict with 'input_ports' and 'output_ports' lists.
+        """
+        input_ports = [{"id": "default", "label": "In"}]
+        output_ports = [{"id": "default", "label": "Out"}]
+        
+        if node_type == 'ProducerNode':
+            # Producer nodes have no input - they start the flow
+            input_ports = []
+        elif node_type == 'ConditionalNode':
+            # Conditional nodes have yes/no output branches
+            output_ports = [
+                {"id": "yes", "label": "Yes"},
+                {"id": "no", "label": "No"}
+            ]
+        
+        return {'input_ports': input_ports, 'output_ports': output_ports}
 
