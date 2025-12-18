@@ -1,0 +1,102 @@
+{# ==========================================================================
+   Node Engine POC - Jinja Macros
+   Reusable template components for node rendering
+   ========================================================================== #}
+
+{# --------------------------------------------------------------------------
+   count_nodes: Recursively count all nodes in a folder structure
+   -------------------------------------------------------------------------- #}
+{% macro count_nodes(folder_data) %}
+    {%- set ns = namespace(count=folder_data.nodes|length) -%}
+    {%- for subfolder_data in folder_data.subfolders.values() -%}
+        {%- set ns.count = ns.count + count_nodes(subfolder_data)|int -%}
+    {%- endfor -%}
+    {{ ns.count }}
+{%- endmacro %}
+
+{# --------------------------------------------------------------------------
+   render_folder_content: Render nodes and subfolders recursively for main view
+   -------------------------------------------------------------------------- #}
+{% macro render_folder_content(folder_data, prefix, depth=0) %}
+    {# Render nodes directly in this folder #}
+    {% for node in folder_data.nodes %}
+    <div class="node-item" style="padding-left: {{ 20 + depth * 20 }}px;" onclick="showNodeDetails('{{ node.identifier }}')">
+        <div class="node-icon {{ node.type|lower|replace('node', '') }}">
+            <i class="bi bi-box"></i>
+        </div>
+        <div class="node-info">
+            <div class="node-name">
+                {{ node.name }}
+                <i class="bi bi-info-circle-fill info-icon" title="Click to view form JSON"></i>
+            </div>
+            <div class="node-identifier">identifier: {{ node.identifier }}</div>
+        </div>
+        <span class="type-badge">{{ node.type }}</span>
+        {% if node.has_form %}
+        <button class="btn-play-node" onclick="event.stopPropagation(); openExecutionPopup('{{ node.identifier }}', '{{ node.name }}')" title="Execute Node">
+            <i class="bi bi-play-fill"></i>
+        </button>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {# Render subfolders recursively #}
+    {% for subfolder_name, subfolder_data in folder_data.subfolders.items() %}
+    <div class="subfolder-container">
+        <div class="subfolder-header" data-bs-toggle="collapse" data-bs-target="#{{ prefix }}-sub-{{ loop.index }}">
+            <div class="category-title">
+                <i class="bi bi-folder-fill"></i>
+                <span>{{ subfolder_name }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="category-badge">{{ count_nodes(subfolder_data)|trim }} nodes</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div class="collapse show" id="{{ prefix }}-sub-{{ loop.index }}">
+            {{ render_folder_content(subfolder_data, prefix ~ '-sub-' ~ loop.index, depth + 1) }}
+        </div>
+    </div>
+    {% endfor %}
+{% endmacro %}
+
+{# --------------------------------------------------------------------------
+   render_modal_folder: Render nodes and subfolders for Add Node modal
+   -------------------------------------------------------------------------- #}
+{% macro render_modal_folder(folder_data, prefix, depth=0) %}
+    {# Render nodes directly in this folder #}
+    <div class="modal-node-list" style="margin-left: {{ depth * 15 }}px;">
+        {% for node in folder_data.nodes %}
+        <div class="modal-node-item" onclick="selectNode('{{ node.identifier }}', '{{ node.name }}')">
+            <div class="modal-node-icon {{ node.type|lower|replace('node', '') }}">
+                <i class="bi bi-box"></i>
+            </div>
+            <div class="modal-node-info">
+                <div class="modal-node-name">
+                    {{ node.name }}
+                    <i class="bi bi-info-circle-fill text-primary" style="font-size: 0.8rem;"></i>
+                </div>
+                <div class="modal-node-identifier">identifier: {{ node.identifier }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Render subfolders recursively #}
+    {% for subfolder_name, subfolder_data in folder_data.subfolders.items() %}
+    <div class="modal-subfolder-content">
+        <div class="modal-subfolder-header" data-bs-toggle="collapse" data-bs-target="#{{ prefix }}-msub-{{ loop.index }}">
+            <div class="modal-category-title">
+                <i class="bi bi-folder-fill"></i>
+                <span>{{ subfolder_name }}</span>
+                <small class="text-muted">({{ count_nodes(subfolder_data)|trim }} nodes)</small>
+            </div>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="{{ prefix }}-msub-{{ loop.index }}">
+            {{ render_modal_folder(subfolder_data, prefix ~ '-msub-' ~ loop.index, depth + 1) }}
+        </div>
+    </div>
+    {% endfor %}
+{% endmacro %}
+
