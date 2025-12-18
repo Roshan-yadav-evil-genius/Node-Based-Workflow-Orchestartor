@@ -1,8 +1,11 @@
 import json
 import os
+from typing import Optional
 import aiofiles
 import structlog
 from ...Core.Node.Core import BlockingNode, NodeOutput, PoolType
+from ...Core.Form.Core.BaseForm import BaseForm
+from .FileWriterForm import FileWriterForm
 
 logger = structlog.get_logger(__name__)
 
@@ -10,6 +13,9 @@ class FileWriter(BlockingNode):
     @classmethod
     def identifier(cls) -> str:
         return "file-writer"
+
+    def get_form(self) -> Optional[BaseForm]:
+        return FileWriterForm()
 
     @property
     def execution_pool(self) -> PoolType:

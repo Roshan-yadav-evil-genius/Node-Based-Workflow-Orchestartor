@@ -2,6 +2,8 @@ from typing import List, Optional
 import structlog
 from ...Core.Node.Core import ProducerNode, NodeOutput, PoolType
 from ...Core.Node.Core.Data import ExecutionCompleted
+from ...Core.Form.Core.BaseForm import BaseForm
+from .StringIteratorForm import StringIteratorForm
 
 logger = structlog.get_logger(__name__)
 
@@ -9,6 +11,9 @@ class StringIterator(ProducerNode):
     @classmethod
     def identifier(cls) -> str:
         return "string-iterator-producer"
+
+    def get_form(self) -> Optional[BaseForm]:
+        return StringIteratorForm()
 
     @property
     def execution_pool(self) -> PoolType:
