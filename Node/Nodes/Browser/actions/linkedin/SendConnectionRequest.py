@@ -53,7 +53,7 @@ class SendConnectionRequest(BlockingNode):
         try:
             # Get browser context
             context = await self.browser_manager.get_context(session_name)
-            page = await self.browser_manager.get_or_create_page(context, profile_url)
+            page = await self.browser_manager.get_or_create_page(context, profile_url,wait_strategy="load")
 
             connection_status = None
             following_status = None

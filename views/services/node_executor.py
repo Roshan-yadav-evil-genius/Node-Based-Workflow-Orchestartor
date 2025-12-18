@@ -98,6 +98,16 @@ class NodeExecutor:
         async def run_async():
             await node_instance.init()
             result = await node_instance.run(node_output)
+            
+            # Close browser after single node execution to prevent stale contexts
+            try:
+                from Node.Nodes.Browser.BrowserManager import BrowserManager
+                browser_manager = BrowserManager()
+                if browser_manager._initialized:
+                    await browser_manager.close()
+            except ImportError:
+                pass  # BrowserManager not available, skip cleanup
+            
             return result
         
         # Execute in asyncio event loop

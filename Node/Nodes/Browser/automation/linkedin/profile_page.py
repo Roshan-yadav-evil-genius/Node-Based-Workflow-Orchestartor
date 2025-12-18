@@ -131,13 +131,11 @@ class ProfilePage:
             if await add_note_btn.is_visible():
                 await add_note_btn.click()
                 await self.profile.message_input().fill(note)
-                await self.page.wait_for_timeout(10000)
                 await self.profile.send_button().click()
             else:
                 logger.warning("'Add a note' button not found")
         else:
             logger.debug("Sending connection request without note")
-            await self.page.wait_for_timeout(10000)
             send_without_note_btn = self.profile.send_without_note_button()
             if await send_without_note_btn.is_visible():
                 await send_without_note_btn.click()
