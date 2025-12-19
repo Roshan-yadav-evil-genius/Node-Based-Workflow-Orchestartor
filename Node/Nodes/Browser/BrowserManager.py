@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from playwright.async_api import (
     async_playwright,
     Browser,
@@ -10,7 +10,52 @@ from playwright.async_api import (
 )
 import structlog
 
+from .services.session_config_service import SessionConfigService
+
 logger = structlog.get_logger(__name__)
+
+# Browser-specific args configuration
+# These args are only compatible with Chromium-based browsers
+CHROMIUM_ONLY_ARGS = [
+    '--disable-dev-shm-usage',
+    '--disable-web-security',
+    '--disable-features=VizDisplayCompositor',
+    '--disable-plugins-discovery',
+    '--disable-default-apps',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+    '--disable-field-trial-config',
+    '--disable-back-forward-cache',
+    '--disable-ipc-flooding-protection',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-component-extensions-with-background-pages',
+    '--disable-background-networking',
+    '--disable-sync',
+    '--metrics-recording-only',
+    '--no-report-upload',
+    '--disable-logging',
+    '--disable-gpu-logging',
+    '--silent',
+    '--disable-gpu',
+    '--disable-software-rasterizer',
+    '--disable-client-side-phishing-detection',
+    '--disable-hang-monitor',
+    '--disable-prompt-on-repost',
+    '--disable-domain-reliability',
+    '--disable-component-update',
+    '--disable-features=TranslateUI',
+]
+
+# Common args that work across all browser types
+COMMON_ARGS = [
+    '--no-sandbox',
+    '--disable-blink-features=AutomationControlled',
+]
+
+# Valid browser types supported by Playwright
+VALID_BROWSER_TYPES = ['chromium', 'firefox', 'webkit']
 
 
 class BrowserManager:
@@ -41,70 +86,129 @@ class BrowserManager:
             self._initialized = True
             logger.info("BrowserManager initialized successfully")
 
-    async def get_context(self, context_name: str, **kwargs) -> BrowserContext:
+    def _get_browser_args(self, browser_type: str, custom_args: Optional[List[str]] = None) -> List[str]:
         """
-        Get an existing persistent context by name or create a new one.
-        The context name is used as the directory name for the persistent session.
+        Get browser-specific args.
+        
+        Chromium gets all args, Firefox/WebKit only get common args.
+        Custom args from session config are always appended.
+        
+        Args:
+            browser_type: The browser type (chromium, firefox, webkit)
+            custom_args: Custom args from session playwright_config
+            
+        Returns:
+            List of browser args
+        """
+        base_args = COMMON_ARGS.copy()
+        
+        if browser_type == 'chromium':
+            base_args.extend(CHROMIUM_ONLY_ARGS)
+        
+        # Append custom args from session config
+        if custom_args:
+            base_args.extend(custom_args)
+        
+        return base_args
+
+    def _get_browser_launcher(self, browser_type: str):
+        """
+        Get the appropriate browser launcher based on browser_type.
+        
+        Args:
+            browser_type: The browser type (chromium, firefox, webkit)
+            
+        Returns:
+            The Playwright browser launcher
+        """
+        if browser_type not in VALID_BROWSER_TYPES:
+            logger.warning(
+                "Invalid browser_type, falling back to chromium",
+                browser_type=browser_type
+            )
+            browser_type = 'chromium'
+        
+        return getattr(self._playwright, browser_type)
+
+    async def get_context(self, session_id: str, **kwargs) -> BrowserContext:
+        """
+        Get an existing persistent context by session_id or create a new one.
+        The session_id is used to fetch config from DB and as the directory name.
+        
+        Args:
+            session_id: The UUID of the browser session from the database
+            **kwargs: Additional launch arguments to override defaults
+            
+        Returns:
+            The browser context
         """
         if not self._initialized:
             await self.initialize()
 
-        if context_name in self._contexts:
-            logger.info(f"Reusing existing persistent context: {context_name}")
-            return self._contexts[context_name]
+        if session_id in self._contexts:
+            logger.info("Reusing existing persistent context", session_id=session_id)
+            return self._contexts[session_id]
 
-        logger.info(f"Creating new persistent context: {context_name}")
+        # Fetch session config from backend API
+        session_config = SessionConfigService.get_session_config(session_id)
+        
+        # Extract config values with defaults
+        browser_type = 'chromium'
+        playwright_config = {}
+        
+        if session_config:
+            browser_type = session_config.get('browser_type', 'chromium')
+            playwright_config = session_config.get('playwright_config', {}) or {}
+        
+        logger.info(
+            "Creating browser context",
+            session_id=session_id,
+            browser_type=browser_type,
+            has_user_agent=bool(playwright_config.get('user_agent')),
+            custom_args_count=len(playwright_config.get('args', []))
+        )
+
         # Use backend's browser_sessions directory for persistent browser data
         backend_sessions_dir = Path(
             __file__).parent.parent.parent.parent.parent / 'backend' / 'browser_sessions'
         backend_sessions_dir.mkdir(parents=True, exist_ok=True)
-        user_data_dir = str(backend_sessions_dir / context_name)
+        user_data_dir = str(backend_sessions_dir / session_id)
 
-        # Merge default args with kwargs
+        # Get browser-specific args
+        browser_args = self._get_browser_args(
+            browser_type, 
+            playwright_config.get('args')
+        )
+
+        # Build launch args
         launch_args = {
             "headless": self._headless,
-            "args": [
-                '--no-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-dev-shm-usage',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor',
-                '--disable-plugins-discovery',
-                '--disable-default-apps',
-                '--disable-background-timer-throttling',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-renderer-backgrounding',
-                '--disable-field-trial-config',
-                '--disable-back-forward-cache',
-                '--disable-ipc-flooding-protection',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--disable-component-extensions-with-background-pages',
-                '--disable-background-networking',
-                '--disable-sync',
-                '--metrics-recording-only',
-                '--no-report-upload',
-                '--disable-logging',
-                '--disable-gpu-logging',
-                '--silent',
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-background-timer-throttling',
-                '--disable-client-side-phishing-detection',
-                '--disable-hang-monitor',
-                '--disable-prompt-on-repost',
-                '--disable-domain-reliability',
-                '--disable-component-update',
-                '--disable-features=TranslateUI',
-                '--disable-ipc-flooding-protection',
-            ],  # Standard anti-bot mitigation
+            "args": browser_args,
         }
+        
+        # Add user_agent if provided in session config
+        user_agent = playwright_config.get('user_agent')
+        if user_agent:
+            launch_args['user_agent'] = user_agent
+            logger.debug("Using custom user_agent", user_agent=user_agent[:50] + "..." if len(user_agent) > 50 else user_agent)
+
+        # Override with any kwargs passed directly
         launch_args.update(kwargs)
 
-        context = await self._playwright.chromium.launch_persistent_context(
+        # Get the appropriate browser launcher
+        browser_launcher = self._get_browser_launcher(browser_type)
+        
+        context = await browser_launcher.launch_persistent_context(
             user_data_dir, **launch_args
         )
-        self._contexts[context_name] = context
+        self._contexts[session_id] = context
+        
+        logger.info(
+            "Browser context created successfully",
+            session_id=session_id,
+            browser_type=browser_type
+        )
+        
         return context
 
     async def get_or_create_page(self, context: BrowserContext, url: str, wait_strategy: str = "commit") -> Page:
