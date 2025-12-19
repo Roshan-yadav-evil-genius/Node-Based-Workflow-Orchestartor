@@ -92,9 +92,14 @@ class FormTesting(BaseForm):
             'state': ['language']      # When state changes, update language
         }
     
-    def populate_field(self, field_name, parent_value):
+    def populate_field(self, field_name, parent_value, form_values=None):
         """
         REQUIRED: Provide choices for dependent fields based on parent value.
+        
+        Args:
+            field_name: Name of the dependent field to populate
+            parent_value: Value of the immediate parent field
+            form_values: All current form values (optional, for multi-parent access)
         """
         if field_name == 'state':
             # State depends on country

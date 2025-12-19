@@ -64,9 +64,17 @@ class BaseForm(DependencyInjector, forms.Form, metaclass=FormABCMeta):
         """
         pass
 
-    def populate_field(self, field_name, parent_value):
+    def populate_field(self, field_name, parent_value, form_values=None):
         """
         REQUIRED: Provide choices for dependent fields based on parent value.
+        
+        Args:
+            field_name: Name of the dependent field to populate
+            parent_value: Value of the immediate parent field
+            form_values: All current form values for multi-parent access (optional)
+            
+        Returns:
+            list: List of (value, label) tuples for field choices
         """
         return []
     

@@ -104,7 +104,7 @@ class GoogleSheetsGetRowForm(BaseForm):
             'spreadsheet': ['sheet']            # Spreadsheet selection loads sheets
         }
     
-    def populate_field(self, field_name, parent_value):
+    def populate_field(self, field_name, parent_value, form_values=None):
         """
         Provide choices for dependent fields based on parent value.
         
@@ -112,12 +112,15 @@ class GoogleSheetsGetRowForm(BaseForm):
         
         Args:
             field_name: Name of the dependent field to populate
-            parent_value: Value of the parent field
+            parent_value: Value of the immediate parent field
+            form_values: All current form values for multi-parent access
             
         Returns:
             List of (value, text) tuples for the field choices
         """
         from .services.google_sheets_service import GoogleSheetsService
+        
+        form_values = form_values or {}
         
         if field_name == 'spreadsheet':
             # Load spreadsheets for the selected Google account
@@ -150,8 +153,8 @@ class GoogleSheetsGetRowForm(BaseForm):
                 return [("", "-- Select Sheet --")]
             
             try:
-                # Get account ID from current form state
-                account_id = self._get_field_value('google_account')
+                # Get account ID from form_values (multi-parent access)
+                account_id = form_values.get('google_account')
                 
                 if not account_id:
                     logger.warning("No account ID available for sheet loading")
@@ -163,6 +166,7 @@ class GoogleSheetsGetRowForm(BaseForm):
                 logger.debug(
                     "Populated sheets",
                     spreadsheet_id=parent_value,
+                    account_id=account_id,
                     count=len(sheets)
                 )
                 

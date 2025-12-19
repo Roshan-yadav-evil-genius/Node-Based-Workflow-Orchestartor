@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple, Optional
 
 
 class DependencyInjector(ABC):
@@ -10,7 +11,7 @@ class DependencyInjector(ABC):
     """
     
     @abstractmethod
-    def get_field_dependencies(self):
+    def get_field_dependencies(self) -> Dict[str, List[str]]:
         """
         REQUIRED: Define field dependencies.
         
@@ -21,13 +22,19 @@ class DependencyInjector(ABC):
         pass
     
     @abstractmethod
-    def populate_field(self, field_name, parent_value):
+    def populate_field(
+        self, 
+        field_name: str, 
+        parent_value: Any, 
+        form_values: Optional[Dict[str, Any]] = None
+    ) -> List[Tuple[str, str]]:
         """
         REQUIRED: Populate choices for a dependent field based on parent value.
         
         Args:
             field_name: Name of the dependent field to populate
-            parent_value: Value of the parent field
+            parent_value: Value of the immediate parent field
+            form_values: All current form values for multi-parent access (optional)
             
         Returns:
             list: List of tuples (value, label) for the dependent field

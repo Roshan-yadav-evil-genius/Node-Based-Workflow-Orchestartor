@@ -91,7 +91,8 @@ class FormLoader:
         self, 
         node_metadata: Dict, 
         field_name: str, 
-        parent_value: str
+        parent_value: str,
+        form_values: Dict = None
     ) -> List:
         """
         Get options for a dependent field based on parent value.
@@ -100,10 +101,13 @@ class FormLoader:
             node_metadata: Node metadata dict.
             field_name: Name of the dependent field.
             parent_value: Value of the parent field.
+            form_values: All current form values for multi-parent access.
             
         Returns:
             List of (value, text) tuples for the field options.
         """
+        form_values = form_values or {}
+        
         try:
             node_class = self._node_loader.load_class(node_metadata)
             if node_class is None:
@@ -124,8 +128,13 @@ class FormLoader:
             if not hasattr(form, 'populate_field'):
                 return []
             
+            # Populate form with current values for multi-parent access
+            if form_values and hasattr(form, 'update_field'):
+                for key, value in form_values.items():
+                    form.update_field(key, value)
+            
             # Get options from the form's populate_field method
-            options = form.populate_field(field_name, parent_value)
+            options = form.populate_field(field_name, parent_value, form_values)
             return options if options else []
             
         except Exception as e:
