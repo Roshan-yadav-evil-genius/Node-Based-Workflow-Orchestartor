@@ -20,6 +20,23 @@ from ...Core.Form.Core.BaseForm import BaseForm
 logger = structlog.get_logger(__name__)
 
 
+class DynamicChoiceField(forms.ChoiceField):
+    """
+    ChoiceField that skips choice validation for dynamically populated options.
+    
+    Use this for fields whose choices are loaded dynamically (e.g., from API)
+    and aren't available at form instantiation time during node execution.
+    """
+    
+    def validate(self, value):
+        """Skip choice validation - only check if required."""
+        if value in self.empty_values and self.required:
+            raise forms.ValidationError(
+                self.error_messages['required'], 
+                code='required'
+            )
+
+
 def get_google_account_choices():
     """
     Fetch available Google accounts from backend API.
@@ -62,13 +79,14 @@ class GoogleSheetsGetRowForm(BaseForm):
         help_text="Select a connected Google account"
     )
     
-    spreadsheet = forms.ChoiceField(
+    # Use DynamicChoiceField for fields populated via cascading API calls
+    spreadsheet = DynamicChoiceField(
         choices=[("", "-- Select Spreadsheet --")],
         required=True,
         help_text="Select a Google Spreadsheet"
     )
     
-    sheet = forms.ChoiceField(
+    sheet = DynamicChoiceField(
         choices=[("", "-- Select Sheet --")],
         required=True,
         help_text="Select a sheet within the spreadsheet"
