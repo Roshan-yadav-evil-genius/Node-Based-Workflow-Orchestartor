@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from typing import Dict, Optional
 from playwright.async_api import (
     async_playwright,
@@ -53,13 +54,49 @@ class BrowserManager:
             return self._contexts[context_name]
 
         logger.info(f"Creating new persistent context: {context_name}")
-        user_data_dir = f"bin/BrowserSession/{context_name}"
+        # Use backend's browser_sessions directory for persistent browser data
+        backend_sessions_dir = Path(
+            __file__).parent.parent.parent.parent.parent / 'backend' / 'browser_sessions'
+        backend_sessions_dir.mkdir(parents=True, exist_ok=True)
+        user_data_dir = str(backend_sessions_dir / context_name)
 
         # Merge default args with kwargs
         launch_args = {
             "headless": self._headless,
             "args": [
-                "--disable-blink-features=AutomationControlled"
+                '--no-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor',
+                '--disable-plugins-discovery',
+                '--disable-default-apps',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-field-trial-config',
+                '--disable-back-forward-cache',
+                '--disable-ipc-flooding-protection',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-background-networking',
+                '--disable-sync',
+                '--metrics-recording-only',
+                '--no-report-upload',
+                '--disable-logging',
+                '--disable-gpu-logging',
+                '--silent',
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-background-timer-throttling',
+                '--disable-client-side-phishing-detection',
+                '--disable-hang-monitor',
+                '--disable-prompt-on-repost',
+                '--disable-domain-reliability',
+                '--disable-component-update',
+                '--disable-features=TranslateUI',
+                '--disable-ipc-flooding-protection',
             ],  # Standard anti-bot mitigation
         }
         launch_args.update(kwargs)
