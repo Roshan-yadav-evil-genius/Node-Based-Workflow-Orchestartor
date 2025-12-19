@@ -2,7 +2,7 @@ from .BaseNode import BaseNode, ProducerNode, BlockingNode, NonBlockingNode, Con
 
 
 # Utilities
-from .Data import PoolType, NodeConfig, NodeOutput
+from .Data import PoolType, NodeConfig, NodeOutput, ExecutionCompleted
 
 
-__all__ = ['BaseNode', 'ProducerNode', 'BlockingNode', 'NonBlockingNode', 'ConditionalNode', 'PoolType', 'NodeConfig', 'NodeOutput']
+__all__ = ['BaseNode', 'ProducerNode', 'BlockingNode', 'NonBlockingNode', 'ConditionalNode', 'PoolType', 'NodeConfig', 'NodeOutput', 'ExecutionCompleted']
