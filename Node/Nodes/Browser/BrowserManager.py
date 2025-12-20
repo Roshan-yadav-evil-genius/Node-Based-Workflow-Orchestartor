@@ -86,16 +86,14 @@ class BrowserManager:
             self._initialized = True
             logger.info("BrowserManager initialized successfully")
 
-    def _get_browser_args(self, browser_type: str, custom_args: Optional[List[str]] = None) -> List[str]:
+    def _get_browser_args(self, browser_type: str) -> List[str]:
         """
-        Get browser-specific args.
+        Get browser-specific args (hardcoded for anti-bot mitigation).
         
         Chromium gets all args, Firefox/WebKit only get common args.
-        Custom args from session config are always appended.
         
         Args:
             browser_type: The browser type (chromium, firefox, webkit)
-            custom_args: Custom args from session playwright_config
             
         Returns:
             List of browser args
@@ -104,10 +102,6 @@ class BrowserManager:
         
         if browser_type == 'chromium':
             base_args.extend(CHROMIUM_ONLY_ARGS)
-        
-        # Append custom args from session config
-        if custom_args:
-            base_args.extend(custom_args)
         
         return base_args
 
@@ -164,8 +158,7 @@ class BrowserManager:
             "Creating browser context",
             session_id=session_id,
             browser_type=browser_type,
-            has_user_agent=bool(playwright_config.get('user_agent')),
-            custom_args_count=len(playwright_config.get('args', []))
+            has_user_agent=bool(playwright_config.get('user_agent'))
         )
 
         # Use backend's browser_sessions directory for persistent browser data
@@ -174,11 +167,8 @@ class BrowserManager:
         backend_sessions_dir.mkdir(parents=True, exist_ok=True)
         user_data_dir = str(backend_sessions_dir / session_id)
 
-        # Get browser-specific args
-        browser_args = self._get_browser_args(
-            browser_type, 
-            playwright_config.get('args')
-        )
+        # Get browser-specific args (hardcoded)
+        browser_args = self._get_browser_args(browser_type)
 
         # Build launch args
         launch_args = {
