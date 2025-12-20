@@ -165,15 +165,16 @@ def get_field_options(identifier):
     parent_field = request_data.get('parent_field')
     parent_value = request_data.get('parent_value')
     dependent_field = request_data.get('dependent_field')
+    form_values = request_data.get('form_values', {})
     
     if not all([parent_field, dependent_field]):
         return jsonify({
             'error': 'parent_field and dependent_field are required'
         }), 400
     
-    # Get field options from form
+    # Get field options from form (pass form_values for multi-parent access)
     options = services.form_loader.get_field_options(
-        node, dependent_field, parent_value
+        node, dependent_field, parent_value, form_values
     )
     
     return jsonify({

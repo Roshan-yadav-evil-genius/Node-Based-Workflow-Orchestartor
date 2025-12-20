@@ -344,4 +344,176 @@ class GoogleSheetsService:
                 error=str(e)
             )
             raise Exception(f"Failed to get row: {e}")
+    
+    def update_row(
+        self,
+        spreadsheet_id: str,
+        sheet_name: str,
+        row_number: int,
+        values: List[Any],
+        start_column: str = "A"
+    ) -> Dict[str, Any]:
+        """
+        Update data in a specific row.
+        
+        Args:
+            spreadsheet_id: The Google Spreadsheet ID
+            sheet_name: Name of the sheet tab
+            row_number: Row number to update (1-indexed)
+            values: List of values to write to the row
+            start_column: Column letter to start writing from (default: A)
+            
+        Returns:
+            Dict with update result:
+            {
+                "row_number": 5,
+                "updated_cells": 3,
+                "updated_range": "Sheet1!A5:C5",
+                "spreadsheet_id": "...",
+                "sheet_name": "Sheet1"
+            }
+            
+        Raises:
+            Exception: If row cannot be updated
+        """
+        try:
+            sheets = self._get_sheets_service()
+            
+            # Calculate end column based on number of values
+            end_column_index = ord(start_column.upper()) - ord('A') + len(values)
+            end_column = chr(ord('A') + end_column_index - 1)
+            
+            # A1 notation for the range to update
+            range_notation = f"'{sheet_name}'!{start_column}{row_number}:{end_column}{row_number}"
+            
+            body = {
+                'values': [values]  # Single row as 2D array
+            }
+            
+            result = sheets.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_notation,
+                valueInputOption='USER_ENTERED',  # Parse values like user input
+                body=body
+            ).execute()
+            
+            logger.info(
+                "Row updated",
+                spreadsheet_id=spreadsheet_id,
+                sheet_name=sheet_name,
+                row_number=row_number,
+                updated_cells=result.get('updatedCells', 0)
+            )
+            
+            return {
+                "row_number": row_number,
+                "updated_cells": result.get('updatedCells', 0),
+                "updated_range": result.get('updatedRange'),
+                "spreadsheet_id": spreadsheet_id,
+                "sheet_name": sheet_name
+            }
+            
+        except HttpError as e:
+            logger.error(
+                "Failed to update row",
+                spreadsheet_id=spreadsheet_id,
+                sheet_name=sheet_name,
+                row_number=row_number,
+                error=str(e)
+            )
+            raise Exception(f"Failed to update row: {e}")
+    
+    def update_row_by_headers(
+        self,
+        spreadsheet_id: str,
+        sheet_name: str,
+        row_number: int,
+        data: Dict[str, Any],
+        header_row: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Update row data using header names as keys.
+        
+        Only updates columns that have matching headers in the data dict.
+        
+        Args:
+            spreadsheet_id: The Google Spreadsheet ID
+            sheet_name: Name of the sheet tab
+            row_number: Row number to update (1-indexed)
+            data: Dict mapping header names to values
+            header_row: Row containing column headers (default: 1)
+            
+        Returns:
+            Dict with update result including matched headers
+            
+        Raises:
+            Exception: If row cannot be updated
+        """
+        try:
+            sheets = self._get_sheets_service()
+            
+            # First, get the headers
+            header_range = f"'{sheet_name}'!{header_row}:{header_row}"
+            header_result = sheets.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=header_range
+            ).execute()
+            
+            headers = header_result.get('values', [[]])[0] if header_result.get('values') else []
+            
+            if not headers:
+                raise Exception("No headers found in the specified header row")
+            
+            # Build the row values based on headers
+            values = []
+            matched_headers = []
+            for header in headers:
+                if header in data:
+                    values.append(data[header])
+                    matched_headers.append(header)
+                else:
+                    values.append("")  # Preserve empty for unmatched columns
+            
+            # Update the row
+            range_notation = f"'{sheet_name}'!A{row_number}"
+            
+            body = {
+                'values': [values]
+            }
+            
+            result = sheets.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_notation,
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute()
+            
+            logger.info(
+                "Row updated by headers",
+                spreadsheet_id=spreadsheet_id,
+                sheet_name=sheet_name,
+                row_number=row_number,
+                matched_headers=matched_headers,
+                updated_cells=result.get('updatedCells', 0)
+            )
+            
+            return {
+                "row_number": row_number,
+                "updated_cells": result.get('updatedCells', 0),
+                "updated_range": result.get('updatedRange'),
+                "headers": headers,
+                "matched_headers": matched_headers,
+                "spreadsheet_id": spreadsheet_id,
+                "sheet_name": sheet_name
+            }
+            
+        except HttpError as e:
+            logger.error(
+                "Failed to update row by headers",
+                spreadsheet_id=spreadsheet_id,
+                sheet_name=sheet_name,
+                row_number=row_number,
+                error=str(e)
+            )
+            raise Exception(f"Failed to update row: {e}")
 

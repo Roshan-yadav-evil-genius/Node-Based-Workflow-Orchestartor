@@ -1,5 +1,5 @@
 """
-Google Sheets Get Row Form
+Google Sheets Update Row Form
 
 Single Responsibility: Form field definitions and cascading dependencies.
 
@@ -8,9 +8,11 @@ This form handles:
 - Spreadsheet selection (cascades from account)
 - Sheet selection (cascades from spreadsheet)
 - Row number input
+- Row data input (JSON format for header-value mapping)
 - Header row configuration
 """
 
+import json
 from django import forms
 import structlog
 
@@ -25,9 +27,9 @@ from .form_utils import (
 logger = structlog.get_logger(__name__)
 
 
-class GoogleSheetsGetRowForm(BaseForm):
+class GoogleSheetsUpdateRowForm(BaseForm):
     """
-    Form for Google Sheets Get Row node with cascading dropdowns.
+    Form for Google Sheets Update Row node with cascading dropdowns.
     
     Field Dependencies:
     - google_account -> spreadsheet (selecting account loads spreadsheets)
@@ -59,7 +61,13 @@ class GoogleSheetsGetRowForm(BaseForm):
     row_number = forms.IntegerField(
         min_value=1,
         required=True,
-        help_text="Row number to retrieve (1-indexed)"
+        help_text="Row number to update (1-indexed)"
+    )
+    
+    row_data = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 5}),
+        required=True,
+        help_text='JSON object mapping column headers to values, e.g. {"Name": "John", "Email": "john@example.com"}'
     )
     
     header_row = forms.IntegerField(
@@ -112,3 +120,26 @@ class GoogleSheetsGetRowForm(BaseForm):
             )
         
         return []
+    
+    def clean_row_data(self):
+        """
+        Validate that row_data is valid JSON and is a dictionary.
+        
+        Returns:
+            dict: Parsed JSON data as a dictionary
+            
+        Raises:
+            ValidationError: If JSON is invalid or not a dictionary
+        """
+        row_data = self.cleaned_data.get('row_data', '')
+        
+        try:
+            parsed = json.loads(row_data)
+            if not isinstance(parsed, dict):
+                raise forms.ValidationError(
+                    "Row data must be a JSON object (dictionary), not a list or primitive"
+                )
+            return parsed
+        except json.JSONDecodeError as e:
+            raise forms.ValidationError(f"Invalid JSON: {e}")
+
