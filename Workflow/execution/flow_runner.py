@@ -1,12 +1,15 @@
 import asyncio
 import structlog
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 from Node.Core.Node.Core.BaseNode import ProducerNode, NonBlockingNode, ConditionalNode
 from Node.Core.Node.Core.Data import NodeOutput
 from ..flow_utils import node_type
 from ..flow_node import FlowNode
 from .pool_executor import PoolExecutor
 from Node.Core.Node.Core.Data import ExecutionCompleted
+
+if TYPE_CHECKING:
+    from ..events import WorkflowEventEmitter
 
 
 logger = structlog.get_logger(__name__)
@@ -17,10 +20,16 @@ class FlowRunner:
     Manages a single flow loop in Production Mode.
     """
 
-    def __init__(self, producer_flow_node: FlowNode, executor: Optional[PoolExecutor] = None):
+    def __init__(
+        self, 
+        producer_flow_node: FlowNode, 
+        executor: Optional[PoolExecutor] = None,
+        events: Optional["WorkflowEventEmitter"] = None
+    ):
         self.producer_flow_node = producer_flow_node
         self.producer = producer_flow_node.instance
         self.executor = executor or PoolExecutor()
+        self.events = events
         self.running = False
         self.loop_count = 0
 
@@ -33,14 +42,35 @@ class FlowRunner:
                 self.loop_count += 1
                 try:
                     producer = self.producer_flow_node.instance
-                    logger.info("Initiating node execution", node_id=self.producer_flow_node.id, node_type=f"{node_type(producer)}({producer.identifier()})")
+                    producer_type = producer.identifier()
+                    
+                    # Emit node_started event
+                    if self.events:
+                        self.events.emit_node_started(self.producer_flow_node.id, producer_type)
+                    
+                    logger.info("Initiating node execution", node_id=self.producer_flow_node.id, node_type=f"{node_type(producer)}({producer_type})")
                     data = await self.executor.execute_in_pool(
                         producer.execution_pool, producer, NodeOutput(data={})
                     )
+                    
+                    # Determine route for conditional nodes
+                    route = None
+                    if isinstance(producer, ConditionalNode) and producer.output:
+                        route = producer.output
+                    
+                    # Emit node_completed event
+                    if self.events:
+                        self.events.emit_node_completed(
+                            self.producer_flow_node.id,
+                            producer_type,
+                            output_data=data.data if hasattr(data, 'data') else None,
+                            route=route
+                        )
+                    
                     logger.info(
                         "Node execution completed",
                         node_id=self.producer_flow_node.id,
-                        node_type=f"{node_type(producer)}({producer.identifier()})",
+                        node_type=f"{node_type(producer)}({producer_type})",
                         output=data.data,
                     )
 
@@ -99,11 +129,16 @@ class FlowRunner:
         # Execute selected nodes
         for next_flow_node in nodes_to_run:
             next_instance = next_flow_node.instance
+            next_node_type = next_instance.identifier()
+
+            # Emit node_started event
+            if self.events:
+                self.events.emit_node_started(next_flow_node.id, next_node_type)
 
             logger.info(
                 "Initiating node execution",
                 node_id=next_flow_node.id,
-                node_type=f"{node_type(next_instance)}({next_instance.identifier()})",
+                node_type=f"{node_type(next_instance)}({next_node_type})",
             )
 
             try:
@@ -111,10 +146,24 @@ class FlowRunner:
                     next_instance.execution_pool, next_instance, input_data
                 )
 
+                # Determine route for conditional nodes
+                route = None
+                if isinstance(next_instance, ConditionalNode) and next_instance.output:
+                    route = next_instance.output
+
+                # Emit node_completed event
+                if self.events:
+                    self.events.emit_node_completed(
+                        next_flow_node.id,
+                        next_node_type,
+                        output_data=data.data if hasattr(data, 'data') else None,
+                        route=route
+                    )
+
                 logger.info(
                     "Node execution completed",
                     node_id=next_flow_node.id,
-                    node_type=f"{node_type(next_instance)}({next_instance.identifier()})",
+                    node_type=f"{node_type(next_instance)}({next_node_type})",
                     output=data.data,
                 )
 
@@ -125,13 +174,12 @@ class FlowRunner:
                 await self._process_next_nodes(next_flow_node, data)
 
             except Exception as e:
+                # Emit node_failed event
+                if self.events:
+                    self.events.emit_node_failed(next_flow_node.id, next_node_type, str(e))
                 logger.exception(
                     "Error executing node", node_id=next_flow_node.id, error=str(e)
                 )
-
-            except Exception as e:
-                logger.exception("Error in loop", error=str(e))
-                await asyncio.sleep(1)
 
     async def kill_producer(self):
         # Clean up producer resources
