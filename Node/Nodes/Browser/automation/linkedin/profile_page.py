@@ -26,9 +26,10 @@ class ProfilePage:
             logger.error("Invalid LinkedIn profile URL: %s", profile_url)
             raise ValueError("Invalid LinkedIn profile URL.")
 
-        self.profile_url = profile_url
+        # Normalize URL to use https and www prefix
+        self.profile_url = self._normalize_linkedin_url(profile_url)
         self.profile = LinkedInProfilePageSelectors(self.page)
-        logger.debug("Initialized ProfilePage for: %s", profile_url)
+        logger.debug("Initialized ProfilePage for: %s", self.profile_url)
 
     # ─────────────────────────────────────────────────────────────
     # Public Methods
@@ -145,18 +146,35 @@ class ProfilePage:
     @staticmethod
     def _is_valid_linkedin_profile_url(profile_url: str) -> bool:
         # EX: https://www.linkedin.com/in/zackspear/
+        # Also accepts http:// URLs (will be normalized to https in __init__)
 
         parsed = urlparse(profile_url)
 
-        if parsed.scheme != "https":
+        # Accept both http and https
+        if parsed.scheme not in ("http", "https"):
             return False
 
-        if parsed.netloc.lower() != "www.linkedin.com":
+        # Accept with or without www prefix
+        netloc = parsed.netloc.lower()
+        if netloc not in ("www.linkedin.com", "linkedin.com"):
             return False
 
         paths = [p for p in parsed.path.strip("/").split("/") if p]
 
         return len(paths) == 2 and paths[0] == "in"
+    
+    @staticmethod
+    def _normalize_linkedin_url(profile_url: str) -> str:
+        """Normalize LinkedIn URL to use https and www prefix."""
+        parsed = urlparse(profile_url)
+        netloc = parsed.netloc.lower()
+        
+        # Ensure www prefix
+        if netloc == "linkedin.com":
+            netloc = "www.linkedin.com"
+        
+        # Rebuild with https
+        return f"https://{netloc}{parsed.path}"
 
     async def _click_or_expand_more_menu(self, button: Locator, button_name: str) -> bool:
         """

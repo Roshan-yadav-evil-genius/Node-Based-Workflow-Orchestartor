@@ -136,8 +136,9 @@ class CounterNode(ProducerNode):
                 data=previous_node_output.data
             )
         
-        # Store current value in output
-        previous_node_output.data['counter'] = {
+        # Store current value in output with unique key
+        output_key = self.get_unique_output_key(previous_node_output, 'counter')
+        previous_node_output.data[output_key] = {
             'current': self.current_value,
             'min': min_value,
             'max': max_value,

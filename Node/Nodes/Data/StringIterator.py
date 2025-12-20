@@ -67,7 +67,8 @@ class StringIterator(ProducerNode):
 
         logger.info("Emitting item", index=self.current_index, item=item)
 
-        node_data.data["string_iterator"] = {
+        output_key = self.get_unique_output_key(node_data, "string_iterator")
+        node_data.data[output_key] = {
             "value": item,
             "iteration_index": self.current_index
         }

@@ -17,7 +17,10 @@ class LlmProposalPreparer(BlockingNode):
 
     async def execute(self, node_data: NodeOutput) -> NodeOutput:
         await asyncio.sleep(1.0)
-        node_data.data["proposal"] = "Generated Proposal Content..."
-        node_data.data["bid_amount"] = randint(100, 1000)
-        node_data.data["estimated_delivery_days"] = randint(1, 10)
+        output_key = self.get_unique_output_key(node_data, "llm_proposal")
+        node_data.data[output_key] = {
+            "proposal": "Generated Proposal Content...",
+            "bid_amount": randint(100, 1000),
+            "estimated_delivery_days": randint(1, 10)
+        }
         return node_data

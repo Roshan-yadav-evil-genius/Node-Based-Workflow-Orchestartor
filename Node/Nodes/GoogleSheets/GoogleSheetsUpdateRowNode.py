@@ -130,8 +130,9 @@ class GoogleSheetsUpdateRowNode(BlockingNode):
                 matched_headers=update_result.get('matched_headers', [])
             )
             
-            # Attach result to output data
-            previous_node_output.data['google_sheets'] = update_result
+            # Attach result to output data with unique key
+            output_key = self.get_unique_output_key(previous_node_output, 'google_sheets')
+            previous_node_output.data[output_key] = update_result
             
             # Return NodeOutput with metadata
             return NodeOutput(

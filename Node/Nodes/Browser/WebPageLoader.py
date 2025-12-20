@@ -83,7 +83,8 @@ class WebPageLoader(BlockingNode):
                 "content": content,
                 "session_name": session_name,
             }
-            node_data.data["webpage_loader"] = final_data
+            output_key = self.get_unique_output_key(node_data, "webpage_loader")
+            node_data.data[output_key] = final_data
 
             return node_data
 

@@ -179,6 +179,30 @@ class BaseNode(BaseNodeProperty, BaseNodeMethod, ABC):
         """
         pass
 
+    def get_unique_output_key(self, node_data: NodeOutput, base_key: str) -> str:
+        """
+        Generate a unique output key for this node's data.
+        If base_key already exists in node_data.data, appends _2, _3, etc.
+        
+        This prevents nodes of the same type from overwriting each other's output
+        when multiple instances are used in a workflow.
+        
+        Args:
+            node_data: The NodeOutput containing existing data
+            base_key: The base key name (e.g., "google_sheets")
+        
+        Returns:
+            Unique key string (e.g., "google_sheets", "google_sheets_2", etc.)
+        """
+        if base_key not in node_data.data:
+            return base_key
+        
+        counter = 2
+        while f"{base_key}_{counter}" in node_data.data:
+            counter += 1
+        
+        return f"{base_key}_{counter}"
+
 
 class NonBlockingNode(BaseNode, ABC):
     """

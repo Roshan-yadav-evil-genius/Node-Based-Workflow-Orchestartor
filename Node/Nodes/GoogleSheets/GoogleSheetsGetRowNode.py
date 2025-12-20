@@ -127,8 +127,9 @@ class GoogleSheetsGetRowNode(BlockingNode):
                 headers_count=len(row_data.get('headers', []))
             )
             
-            # Attach result to output data
-            previous_node_output.data['google_sheets'] = row_data
+            # Attach result to output data with unique key
+            output_key = self.get_unique_output_key(previous_node_output, 'google_sheets')
+            previous_node_output.data[output_key] = row_data
             
             # Return NodeOutput with metadata
             return NodeOutput(

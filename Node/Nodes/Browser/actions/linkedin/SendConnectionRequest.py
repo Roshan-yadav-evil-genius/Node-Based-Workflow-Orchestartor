@@ -71,10 +71,12 @@ class SendConnectionRequest(BlockingNode):
                 following_status = await profile_page._get_following_status()
             
             final_data = {
-                "connection_request_status":connection_status.value,
-                "follow_status":following_status.value,
+                "connection_request_status": connection_status.value if connection_status else None,
+                "follow_status": following_status.value if following_status else None,
+                "profile_url": profile_url,
             }
-            node_data.data["send_connection_request"] = final_data
+            output_key = self.get_unique_output_key(node_data, "send_connection_request")
+            node_data.data[output_key] = final_data
 
             return node_data
 

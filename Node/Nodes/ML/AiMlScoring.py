@@ -19,6 +19,9 @@ class AiMlScoring(BlockingNode):
         await asyncio.sleep(0.5)
 
         score = random.random()
-        node_data.data["score"] = score
+        output_key = self.get_unique_output_key(node_data, "ai_ml_scoring")
+        node_data.data[output_key] = {
+            "score": score
+        }
 
         return node_data

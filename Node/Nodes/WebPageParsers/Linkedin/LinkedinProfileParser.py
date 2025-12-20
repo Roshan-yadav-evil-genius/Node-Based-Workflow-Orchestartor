@@ -33,7 +33,8 @@ class LinkedinProfileParser(BlockingNode):
             extractor = LinkedInProfileExtractor(html_content)
             extracted_data =  extractor.extract()
             
-            node_data.data["parsed_linkedin_profile"] = extracted_data
+            output_key = self.get_unique_output_key(node_data, "parsed_linkedin_profile")
+            node_data.data[output_key] = extracted_data
             
             return node_data
 
