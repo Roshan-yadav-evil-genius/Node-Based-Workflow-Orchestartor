@@ -434,7 +434,8 @@ class GoogleSheetsService:
         """
         Update row data using header names as keys.
         
-        Only updates columns that have matching headers in the data dict.
+        Only updates columns specified in the data dict. Preserves existing
+        values for columns not included in the data.
         
         Args:
             spreadsheet_id: The Google Spreadsheet ID
@@ -452,27 +453,35 @@ class GoogleSheetsService:
         try:
             sheets = self._get_sheets_service()
             
-            # First, get the headers
-            header_range = f"'{sheet_name}'!{header_row}:{header_row}"
-            header_result = sheets.spreadsheets().values().get(
+            # Fetch BOTH header row AND current row data to preserve unmatched columns
+            ranges = [
+                f"'{sheet_name}'!{header_row}:{header_row}",
+                f"'{sheet_name}'!{row_number}:{row_number}"
+            ]
+            
+            batch_result = sheets.spreadsheets().values().batchGet(
                 spreadsheetId=spreadsheet_id,
-                range=header_range
+                ranges=ranges
             ).execute()
             
-            headers = header_result.get('values', [[]])[0] if header_result.get('values') else []
+            value_ranges = batch_result.get('valueRanges', [])
+            headers = value_ranges[0].get('values', [[]])[0] if len(value_ranges) > 0 and value_ranges[0].get('values') else []
+            current_values = value_ranges[1].get('values', [[]])[0] if len(value_ranges) > 1 and value_ranges[1].get('values') else []
             
             if not headers:
                 raise Exception("No headers found in the specified header row")
             
-            # Build the row values based on headers
+            # Build the row values: use new value if provided, otherwise preserve existing
             values = []
             matched_headers = []
-            for header in headers:
+            for i, header in enumerate(headers):
                 if header in data:
                     values.append(data[header])
                     matched_headers.append(header)
                 else:
-                    values.append("")  # Preserve empty for unmatched columns
+                    # Preserve existing value instead of overwriting with empty
+                    existing_value = current_values[i] if i < len(current_values) else ""
+                    values.append(existing_value)
             
             # Update the row
             range_notation = f"'{sheet_name}'!A{row_number}"
