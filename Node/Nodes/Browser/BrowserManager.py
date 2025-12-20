@@ -175,12 +175,6 @@ class BrowserManager:
             "headless": self._headless,
             "args": browser_args,
         }
-        
-        # Add user_agent if provided in session config
-        user_agent = playwright_config.get('user_agent')
-        if user_agent:
-            launch_args['user_agent'] = user_agent
-            logger.debug("Using custom user_agent", user_agent=user_agent[:50] + "..." if len(user_agent) > 50 else user_agent)
 
         # Override with any kwargs passed directly
         launch_args.update(kwargs)

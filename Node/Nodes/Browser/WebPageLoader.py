@@ -69,7 +69,8 @@ class WebPageLoader(BlockingNode):
 
             # (Redundant waits removed as goto handles it via wait_strategy)
 
-
+            await page.wait_for_timeout(10000)
+            
             # Extract basic info
             title = await page.title()
             content = await page.content()
