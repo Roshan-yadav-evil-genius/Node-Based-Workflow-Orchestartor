@@ -9,12 +9,14 @@ def get_session_choices():
         response = requests.get('http://127.0.0.1:7878/api/browser-sessions/choices/', timeout=5)
         if response.status_code == 200:
             sessions = response.json()
-            # Return choices as (id, name) tuples
-            return [(s['id'], s['name']) for s in sessions]
+            # Return choices as (id, name) tuples with a placeholder
+            choices = [('', '-- Select Session --')]
+            choices.extend([(s['id'], s['name']) for s in sessions])
+            return choices
     except Exception:
         pass
-    # Fallback to empty choices if API is unavailable
-    return []
+    # Fallback to placeholder only if API is unavailable
+    return [('', '-- Select Session --')]
 
 
 class BrowserSessionField(ChoiceField):
@@ -29,4 +31,3 @@ class BrowserSessionField(ChoiceField):
         super().__init__(*args, **kwargs)
         # Populate choices dynamically
         self.choices = get_session_choices()
-
