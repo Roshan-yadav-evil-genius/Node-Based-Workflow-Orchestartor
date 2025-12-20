@@ -12,14 +12,14 @@ This node handles:
 import structlog
 from typing import Optional
 
-from ...Core.Node.Core import BlockingNode, NodeOutput, PoolType, ExecutionCompleted
+from ...Core.Node.Core import ProducerNode, NodeOutput, PoolType, ExecutionCompleted
 from ...Core.Form.Core.BaseForm import BaseForm
 from .CounterForm import CounterForm
 
 logger = structlog.get_logger(__name__)
 
 
-class CounterNode(BlockingNode):
+class CounterNode(ProducerNode):
     """
     Stateful counter that iterates between min and max values.
     
