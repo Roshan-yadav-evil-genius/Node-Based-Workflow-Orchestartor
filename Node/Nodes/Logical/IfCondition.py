@@ -28,7 +28,18 @@ class IfCondition(ConditionalNode):
         if not expression:
             logger.warning("No condition expression provided, defaulting to False", node_id=self.node_config.id)
             self.set_output(False)
-            return node_data
+            return NodeOutput(
+                id=self.node_config.id,
+                data={
+                    **node_data.data,
+                    "if_condition": {
+                        "route": self.output,
+                        "expression": "",
+                        "result": False
+                    }
+                },
+                metadata=node_data.metadata
+            )
 
         try:
             # Evaluate expression with 'data' in context
@@ -54,6 +65,13 @@ class IfCondition(ConditionalNode):
         
         return NodeOutput(
             id=self.node_config.id,
-            data=node_data.data,
+            data={
+                **node_data.data,
+                "if_condition": {
+                    "route": self.output,
+                    "expression": expression,
+                    "result": is_true
+                }
+            },
             metadata=node_data.metadata
         )
