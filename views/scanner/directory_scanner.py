@@ -89,6 +89,9 @@ class DirectoryScanner:
         if not nodes_path.exists():
             return {}
         
+        # Set nodes base path for icon discovery
+        self._file_scanner.set_nodes_base_path(nodes_path)
+        
         grouped_nodes = {}
         
         # Scan top-level subdirectories (categories)
