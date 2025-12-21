@@ -5,10 +5,10 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-class QueueNode(NonBlockingNode):
+class QueueWriter(NonBlockingNode):
     @classmethod
     def identifier(cls) -> str:
-        return "queue-node-dummy"
+        return "queue-node-writer"
 
     @property
     def execution_pool(self) -> PoolType:
