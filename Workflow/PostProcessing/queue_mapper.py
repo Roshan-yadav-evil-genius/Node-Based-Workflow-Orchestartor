@@ -2,7 +2,7 @@ from typing import Optional
 import structlog
 from Node.Core.Node.Core.BaseNode import BaseNode
 from Node.Core.Node.Core.Data import NodeConfigData
-from Node.Nodes.System.QueueNode import QueueNode
+from Node.Nodes.System.QueueWriter import QueueWriter
 from Node.Nodes.System.QueueReader import QueueReader
 from ..flow_node import FlowNode
 from . import PostProcessor
@@ -12,56 +12,56 @@ logger = structlog.get_logger(__name__)
 
 class QueueMapper(PostProcessor):
     """
-    Handles automatic queue name assignment for connected QueueNode-QueueReader pairs.
+    Handles automatic queue name assignment for connected QueueWriter-QueueReader pairs.
     Follows Single Responsibility Principle - only handles queue mapping logic.
     """
 
     def execute(self) -> None:
         """
-        Process the graph and assign unique queue names to connected QueueNode-QueueReader pairs.
+        Process the graph and assign unique queue names to connected QueueWriter-QueueReader pairs.
         """
-        logger.info("Mapping queues for connected QueueNode-QueueReader pairs...")
+        logger.info("Mapping queues for connected QueueWriter-QueueReader pairs...")
         
         mapped_count = 0
         for node_id, workflow_node in self.graph.node_map.items():
-            # Check if this node is a QueueNode
+            # Check if this node is a QueueWriter
             if not self._is_queue_node(workflow_node.instance):
                 continue
             
-            # MULTIPLE BRANCH SUPPORT: Must iterate through lists because QueueNode
+            # MULTIPLE BRANCH SUPPORT: Must iterate through lists because QueueWriter
             # can connect to multiple QueueReaders through different branches
             # OUTER LOOP: Iterate through all branch keys (e.g., "default", "yes", "no")
             for next_key, next_nodes_list in workflow_node.next.items():
                 # INNER LOOP: Iterate through all nodes in each branch list
-                # REASON: A QueueNode can have multiple QueueReader connections, each
+                # REASON: A QueueWriter can have multiple QueueReader connections, each
                 # in a different branch. We need to map queue names for all of them.
                 for next_node in next_nodes_list:
                     # Check if the connected node is a QueueReader
                     if self._is_queue_reader(next_node.instance):
-                        # Generate unique queue name for this QueueNode-QueueReader pair
-                        # Each pair gets its own queue name, even if from same QueueNode
+                        # Generate unique queue name for this QueueWriter-QueueReader pair
+                        # Each pair gets its own queue name, even if from same QueueWriter
                         queue_name = self._generate_queue_name(node_id, next_node.id)
                         
                         # Assign queue name to both nodes' configs
                         self._assign_queue_name(workflow_node, next_node, queue_name)
                         mapped_count += 1
                         logger.info(
-                            f"Auto-assigned queue name '{queue_name}' to QueueNode '{node_id}' and QueueReader '{next_node.id}'"
+                            f"Auto-assigned queue name '{queue_name}' to QueueWriter '{node_id}' and QueueReader '{next_node.id}'"
                         )
         
-        logger.info(f"Queue mapping completed. Mapped {mapped_count} QueueNode-QueueReader pairs.")
+        logger.info(f"Queue mapping completed. Mapped {mapped_count} QueueWriter-QueueReader pairs.")
 
     def _is_queue_node(self, node_instance: BaseNode) -> bool:
         """
-        Check if node is QueueNode or a subclass.
+        Check if node is QueueWriter or a subclass.
 
         Args:
             node_instance: BaseNode instance to check
 
         Returns:
-            True if node is QueueNode or subclass, False otherwise
+            True if node is QueueWriter or subclass, False otherwise
         """
-        return isinstance(node_instance, QueueNode)
+        return isinstance(node_instance, QueueWriter)
 
     def _is_queue_reader(self, node_instance: BaseNode) -> bool:
         """
@@ -80,7 +80,7 @@ class QueueMapper(PostProcessor):
         Generate unique queue name from source and target node IDs.
 
         Args:
-            source_id: ID of the source QueueNode
+            source_id: ID of the source QueueWriter
             target_id: ID of the target QueueReader
 
         Returns:
@@ -95,7 +95,7 @@ class QueueMapper(PostProcessor):
         Assign queue name to both source and target nodes' configs.
 
         Args:
-            source_node: FlowNode instance (QueueNode)
+            source_node: FlowNode instance (QueueWriter)
             target_node: FlowNode instance (QueueReader)
             queue_name: Queue name to assign
         """

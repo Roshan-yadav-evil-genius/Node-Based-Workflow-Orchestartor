@@ -8,7 +8,7 @@ sys.path.append(os.getcwd())
 import structlog
 from config.logging_config import setup_logging
 from Workflow.flow_engine import FlowEngine
-from Node.Nodes.Browser.BrowserManager import BrowserManager
+from Node.Nodes.Browser._shared.BrowserManager import BrowserManager
 
 logger = structlog.get_logger(__name__)
 

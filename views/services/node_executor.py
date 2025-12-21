@@ -151,7 +151,7 @@ class NodeExecutor:
             
             # Close browser after single node execution to prevent stale contexts
             try:
-                from Node.Nodes.Browser.BrowserManager import BrowserManager
+                from Node.Nodes.Browser._shared.BrowserManager import BrowserManager
                 browser_manager = BrowserManager()
                 if browser_manager._initialized:
                     await browser_manager.close()
